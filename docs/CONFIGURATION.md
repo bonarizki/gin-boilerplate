@@ -222,26 +222,27 @@ The following environment variables **MUST** be set. The application will not st
 |----------|-------------|---------|-------|
 | `APP_ENV` | Application environment | `development` | Values: `development`, `staging`, `production` |
 | `DEBUG` | Debug mode | Auto (true in dev) | Set to `True` only in development |
-| `ALLOWED_HOSTS` | Reserved for future Host-header validation | `0.0.0.0` | Comma-separated list. **Not** used for CORS or reverse proxy trust — see `CORS_ALLOWED_ORIGINS` and `TRUSTED_PROXIES` below. |
+| `LOG_LEVEL` | Minimum log level | `info` | `debug`, `info`, `warn`, `error`. Invalid values fail startup. |
+| `LOG_FORMAT` | Log line format | `json` in production, `text` otherwise | `json` or `text`. Logs go to stdout only; there is no `app.log` file. |
+| `MAX_BODY_BYTES` | Maximum request body size | `1048576` (1 MiB) | Larger bodies get `413 Request Entity Too Large`. |
 | `CORS_ALLOWED_ORIGINS` | Frontend origins allowed to make cross-origin requests | Localhost dev origins (see below) | Comma-separated, full URL with scheme (`https://app.example.com`), no wildcard. **Required in production** — startup fails if unset. |
 | `TRUSTED_PROXIES` | Reverse proxy IPs/CIDRs trusted for `X-Forwarded-For` | `127.0.0.1,::1` in development | Comma-separated. Not related to CORS. Empty (trust none) by default outside development. |
 | `SERVER_TIMEZONE` | Server timezone | `UTC` | Must be valid IANA timezone (e.g. UTC, Asia/Jakarta). Default applied in main.go when unset. |
-| `RATE_LIMIT_RPS` | Auth rate limit (requests per second per IP) | `100` | Applied to `/auth` routes only. Set to 0 or omit to use default. |
-| `RATE_LIMIT_BURST` | Auth rate limit burst size | `200` | Max tokens in bucket. Set to 0 or omit to use default. |
-| `MASTER_DB_LOG_MODE` | Enable DB query logging | `True` | Set to `False` in production |
+| `RATE_LIMIT_RPS` | Global rate limit (requests per second per client) | `100` | Applied to all `/api/v1` routes. `/auth` routes additionally use `AUTH_RATE_LIMIT_RPM`/`AUTH_RATE_LIMIT_BURST`. Set to 0 or omit to use default. |
+| `RATE_LIMIT_BURST` | Global rate limit burst size | `200` | Max tokens in bucket. Set to 0 or omit to use default. |
+| `MASTER_DB_LOG_MODE` | Enable DB query logging | `False` | Set to `False` in production |
 | `MASTER_SSL_MODE` | Database SSL mode | `disable` | Use `require` in production |
 | `SERVER_SHUTDOWN_TIMEOUT` | Graceful shutdown timeout (seconds) | `10` | Max time to wait for in-flight requests before exit |
 | `REFRESH_TOKEN_TTL_DAYS` | Refresh token lifetime (days) | `7` | Token is hashed at rest and rotated on every use; see [AUTHENTICATION.md](AUTHENTICATION.md) |
 
 ### CORS Configuration
 
-`CORS_ALLOWED_ORIGINS`, `TRUSTED_PROXIES`, and `ALLOWED_HOSTS` are three separate concepts that are easy to confuse:
+`CORS_ALLOWED_ORIGINS` and `TRUSTED_PROXIES` are separate concepts that are easy to confuse:
 
 | Variable | Purpose | Consumed by |
 |----------|---------|-------------|
 | `CORS_ALLOWED_ORIGINS` | Which frontend origins may call this API from a browser | `middlewares.CORSMiddleware()` |
 | `TRUSTED_PROXIES` | Which upstream proxy IPs are trusted to set `X-Forwarded-For` | `gin.Engine.SetTrustedProxies()` in `routers.SetupRoute()` |
-| `ALLOWED_HOSTS` | Reserved for future `Host` header validation | Not currently enforced |
 
 **Behavior:**
 

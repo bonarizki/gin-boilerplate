@@ -54,6 +54,14 @@ func SetupConfig() error {
 		}
 	}
 
+	logFormat := viper.GetString("LOG_FORMAT")
+	if logFormat == "" && GetEnvironment() == EnvProduction {
+		logFormat = "json"
+	}
+	if err := logger.Configure(viper.GetString("LOG_LEVEL"), logFormat); err != nil {
+		return err
+	}
+
 	if err := ValidateConfig(); err != nil {
 		logger.Errorf("Config validation failed, %v", err)
 		return fmt.Errorf("config validation failed: %w", err)
@@ -64,10 +72,6 @@ func SetupConfig() error {
 		debug = viper.GetBool("DEBUG")
 	} else if GetEnvironment() == EnvDevelopment {
 		debug = true
-	}
-	allowedHosts := viper.GetString("ALLOWED_HOSTS")
-	if allowedHosts == "" {
-		allowedHosts = "0.0.0.0"
 	}
 	rps := viper.GetInt("RATE_LIMIT_RPS")
 	if rps <= 0 {
@@ -123,7 +127,6 @@ func SetupConfig() error {
 			Port:                   viper.GetString("SERVER_PORT"),
 			JWTSecret:              viper.GetString("JWT_SECRET"),
 			Debug:                  debug,
-			AllowedHosts:           allowedHosts,
 			Timezone:               timezone,
 			RequestTimeoutSeconds:  requestTimeout,
 			ShutdownTimeoutSeconds: shutdownTimeout,

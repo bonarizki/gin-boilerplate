@@ -428,7 +428,7 @@ This boilerplate currently provides request ID only; add OpenTelemetry when you 
 
 ```bash
 # Find all logs for a specific request
-grep "550e8400-e29b-41d4-a716-446655440000" app.log
+docker compose logs app | grep "550e8400-e29b-41d4-a716-446655440000"
 
 # Example output (structured request logging):
 # INFO 2025-11-09T10:30:00+07:00 [550e8400-e29b-41d4-a716-446655440000] ARRIVED REQUEST from IP=192.168.1.1 method=POST path=/auth/register query= body={}
@@ -467,7 +467,7 @@ try {
 ```
 1. User reports error
 2. User provides request ID: 550e8400-e29b-41d4-a716-446655440000
-3. Support team searches logs: grep "550e8400..." app.log
+3. Support team searches logs: grep "550e8400..." in the log aggregator
 4. Can see exact error and flow
 ```
 
@@ -503,7 +503,7 @@ Client → Load Balancer → API → Database
 REQUEST_ID="550e8400-e29b-41d4-a716-446655440000"
 
 # 2. Search logs
-grep "$REQUEST_ID" app.log
+docker compose logs app | grep "$REQUEST_ID"
 
 # Output shows timing:
 # [10:30:00.100] [550e8400...] POST /checkout started

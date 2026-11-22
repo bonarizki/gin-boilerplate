@@ -7,15 +7,10 @@ import (
 )
 
 type ServerConfiguration struct {
-	Host      string
-	Port      string
-	JWTSecret string
-	Debug     bool
-	// AllowedHosts is reserved for future Host-header validation; it is NOT
-	// used for CORS (see CORSAllowedOrigins) or reverse proxy trust (see
-	// TrustedProxies).
-	AllowedHosts           string
-	LimitCountPerRequest   int64
+	Host                   string
+	Port                   string
+	JWTSecret              string
+	Debug                  bool
 	Timezone               string // IANA name, e.g. UTC, Asia/Jakarta
 	RequestTimeoutSeconds  int    // http.Server read/write timeout
 	ShutdownTimeoutSeconds int    // graceful shutdown max wait

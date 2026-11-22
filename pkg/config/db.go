@@ -6,7 +6,6 @@ import (
 )
 
 type DatabaseConfiguration struct {
-	Driver   string
 	Dbname   string
 	Username string
 	Password string
@@ -42,10 +41,13 @@ func DbConfiguration() (masterDSN, replicaDSN string) {
 
 func postgresDSN(host, user, password, dbname, port, sslmode string) string {
 	u := &url.URL{
-		Scheme:   "postgres",
-		Host:     fmt.Sprintf("%s:%s", host, port),
-		Path:     "/" + dbname,
-		RawQuery: fmt.Sprintf("sslmode=%s", url.QueryEscape(sslmode)),
+		Scheme: "postgres",
+		Host:   fmt.Sprintf("%s:%s", host, port),
+		Path:   "/" + dbname,
+		RawQuery: url.Values{
+			"sslmode":         {sslmode},
+			"connect_timeout": {"5"},
+		}.Encode(),
 	}
 	if user != "" {
 		u.User = url.UserPassword(user, password)

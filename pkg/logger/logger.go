@@ -3,6 +3,7 @@ package logger
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -13,26 +14,44 @@ import (
 
 var logger = logrus.New()
 
+// Logs go to stdout only; collecting and rotating them is the job of the
+// container runtime or process supervisor.
 func init() {
 	logger.Level = logrus.InfoLevel
 	logger.Formatter = &formatter{}
-	logger.SetReportCaller(true)
-
-	// Open log file
-	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		// Fallback to stdout if opening file fails
-		logger.SetOutput(os.Stdout)
-	} else {
-		// Write logs to both stdout and file
-		mw := io.MultiWriter(os.Stdout, file)
-		logger.SetOutput(mw)
-	}
+	logger.SetOutput(os.Stdout)
 }
 
 // SetLogLevel sets the log level for the logger
 func SetLogLevel(level logrus.Level) {
 	logger.Level = level
+}
+
+// Configure applies LOG_LEVEL (debug, info, warn, error) and LOG_FORMAT
+// ("json" or "text"). Empty values keep the current setting.
+func Configure(level, format string) error {
+	if level != "" {
+		lvl, err := logrus.ParseLevel(level)
+		if err != nil {
+			return fmt.Errorf("invalid LOG_LEVEL %q: %w", level, err)
+		}
+		logger.Level = lvl
+	}
+	switch strings.ToLower(format) {
+	case "":
+	case "json":
+		logger.Formatter = &logrus.JSONFormatter{TimestampFormat: time.RFC3339}
+	case "text":
+		logger.Formatter = &formatter{}
+	default:
+		return fmt.Errorf("invalid LOG_FORMAT %q: want json or text", format)
+	}
+	return nil
+}
+
+// SetOutput redirects log output, mainly for tests.
+func SetOutput(w io.Writer) {
+	logger.SetOutput(w)
 }
 
 // Fields type alias for logrus.Fields

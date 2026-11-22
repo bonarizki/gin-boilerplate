@@ -36,12 +36,21 @@ func DbConnection(masterDSN, replicaDSN string) error {
 	}
 
 	if !debug {
-		if err := db.Use(dbresolver.Register(dbresolver.Config{
+		resolver := dbresolver.Register(dbresolver.Config{
 			Replicas: []gorm.Dialector{
 				postgres.Open(replicaDSN),
 			},
 			Policy: dbresolver.RandomPolicy{},
-		})); err != nil {
+		})
+		if c := config.Get(); c != nil {
+			d := c.Database
+			resolver = resolver.
+				SetMaxOpenConns(d.MaxOpenConns).
+				SetMaxIdleConns(d.MaxIdleConns).
+				SetConnMaxLifetime(time.Duration(d.ConnMaxLifetime) * time.Minute).
+				SetConnMaxIdleTime(time.Duration(d.ConnMaxIdleTime) * time.Minute)
+		}
+		if err := db.Use(resolver); err != nil {
 			logger.Errorf("dbresolver registration error: %v", err)
 			return err
 		}
