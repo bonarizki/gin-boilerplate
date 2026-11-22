@@ -681,9 +681,8 @@ make dev
 
 **Access Services:**
 - API: [http://localhost:8000](http://localhost:8000)
-- PG Admin: [http://localhost:5050](http://localhost:5050)
-  - Email: `admin@admin.com`
-  - Password: `root`
+- PG Admin: [http://localhost:5050](http://localhost:5050) (bound to 127.0.0.1 only)
+  - Email / password: `PGADMIN_EMAIL` / `PGADMIN_PASSWORD` from `.env` (compose refuses to start without them)
   - DB Host: `postgres_db`
 
 ### Production Build
