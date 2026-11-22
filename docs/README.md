@@ -61,9 +61,9 @@ Welcome to the project documentation. This guide helps you navigate all document
 | **AI_QUICK_REFERENCE.md** | Quick templates and decision trees |
 | **00_AI_CRITICAL_RULES.md** | Quick reference for critical rules |
 | **AI_AGENT_RULES.md** | Mandatory rules for AI agents (file size, testing, docs, errors) |
-| **OPENTELEMETRY_TRACING_ANALYSIS.md** | Optional OpenTelemetry analysis; request_id is sufficient for monolith |
-| **CONTROLLER_COMPLIANCE_AUDIT.md** | Controller compliance checklist |
-| **SERVICE_COMPLIANCE_AUDIT.md** | Service compliance checklist |
+| **archive/OPENTELEMETRY_TRACING_ANALYSIS.md** | (archived, point-in-time) Optional OpenTelemetry analysis; request_id is sufficient for monolith |
+| **archive/CONTROLLER_COMPLIANCE_AUDIT.md** | (archived, point-in-time) Controller compliance checklist |
+| **archive/SERVICE_COMPLIANCE_AUDIT.md** | (archived, point-in-time) Service compliance checklist |
 
 ---
 
@@ -182,10 +182,10 @@ Welcome to the project documentation. This guide helps you navigate all document
 **Last Updated:** 2026-02-03
 
 **Recent Changes:**
-- API versioning (`/api/v1`), global rate limit, single config source, request_id/LogStart/LogFinish logging, pluggable EmailSender (see "Recent changes" above).
+- API versioning (`/api/v1`), global rate limit, single config source, request_id logging via logger.FromContext, pluggable EmailSender (see "Recent changes" above).
 - `AI_AGENT_RULES.md` is kept (important for AI agents).
 - Added "New developer onboarding" path in this file.
-- `OPENTELEMETRY_TRACING_ANALYSIS.md` — optional OpenTelemetry analysis; request_id is sufficient for monolith.
+- `archive/OPENTELEMETRY_TRACING_ANALYSIS.md` (archived) — optional OpenTelemetry analysis; request_id is sufficient for monolith.
 
 ---
 

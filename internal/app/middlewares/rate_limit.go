@@ -12,31 +12,64 @@ import (
 	"golang.org/x/time/rate"
 )
 
+const (
+	rateLimiterMaxKeys  = 10_000
+	rateLimiterIdleTTL  = 15 * time.Minute
+	rateLimiterCleanup  = 5 * time.Minute
+)
+
 // IPRateLimiter manages rate limiters per IP address
 type IPRateLimiter struct {
-	ips map[string]*rate.Limiter
-	mu  *sync.RWMutex
-	r   rate.Limit // requests per second
-	b   int        // burst size
+	ips      map[string]*rate.Limiter
+	lastSeen map[string]time.Time
+	mu       sync.Mutex
+	r        rate.Limit
+	b        int
+	maxKeys  int
+	cleanup  sync.Once
 }
 
 // NewIPRateLimiter creates a new IP-based rate limiter
 func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
 	return &IPRateLimiter{
-		ips: make(map[string]*rate.Limiter),
-		mu:  &sync.RWMutex{},
-		r:   r,
-		b:   b,
+		ips:      make(map[string]*rate.Limiter),
+		lastSeen: make(map[string]time.Time),
+		r:        r,
+		b:        b,
+		maxKeys:  rateLimiterMaxKeys,
 	}
+}
+
+func (i *IPRateLimiter) ensureCleanup() {
+	i.cleanup.Do(func() {
+		go func() {
+			ticker := time.NewTicker(rateLimiterCleanup)
+			defer ticker.Stop()
+			for range ticker.C {
+				i.CleanupOldLimiters()
+				logger.Debugf("rate limiter cleanup completed")
+			}
+		}()
+	})
 }
 
 // GetLimiter returns the rate limiter for the given IP address
 func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
+	i.ensureCleanup()
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
+	now := time.Now()
+	i.lastSeen[ip] = now
+
 	limiter, exists := i.ips[ip]
 	if !exists {
+		if len(i.ips) >= i.maxKeys {
+			i.evictStaleLocked(now)
+		}
+		if len(i.ips) >= i.maxKeys {
+			i.evictOldestLocked()
+		}
 		limiter = rate.NewLimiter(i.r, i.b)
 		i.ips[ip] = limiter
 	}
@@ -44,22 +77,51 @@ func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 	return limiter
 }
 
+func (i *IPRateLimiter) evictStaleLocked(now time.Time) {
+	for key, seen := range i.lastSeen {
+		if now.Sub(seen) > rateLimiterIdleTTL {
+			delete(i.ips, key)
+			delete(i.lastSeen, key)
+		}
+	}
+}
+
+func (i *IPRateLimiter) evictOldestLocked() {
+	var oldestKey string
+	var oldest time.Time
+	first := true
+	for key, seen := range i.lastSeen {
+		if first || seen.Before(oldest) {
+			oldestKey = key
+			oldest = seen
+			first = false
+		}
+	}
+	if oldestKey != "" {
+		delete(i.ips, oldestKey)
+		delete(i.lastSeen, oldestKey)
+	}
+}
+
 // CleanupOldLimiters removes limiters that haven't been used recently
-// Call this periodically to prevent memory leaks
 func (i *IPRateLimiter) CleanupOldLimiters() {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-
-	// Remove limiters with full burst capacity (haven't been used)
-	for ip, limiter := range i.ips {
-		if limiter.Tokens() == float64(i.b) {
-			delete(i.ips, ip)
+	now := time.Now()
+	for key, seen := range i.lastSeen {
+		if now.Sub(seen) > rateLimiterIdleTTL {
+			delete(i.ips, key)
+			delete(i.lastSeen, key)
+			continue
+		}
+		if lim, ok := i.ips[key]; ok && lim.Tokens() == float64(i.b) && now.Sub(seen) > rateLimiterCleanup {
+			delete(i.ips, key)
+			delete(i.lastSeen, key)
 		}
 	}
 }
 
 var (
-	// Global rate limiter instance
 	globalLimiter *IPRateLimiter
 	once          sync.Once
 )
@@ -77,16 +139,6 @@ func initRateLimiter() {
 			}
 		}
 		globalLimiter = NewIPRateLimiter(rate.Limit(rps), burst)
-
-		// Cleanup old limiters every 5 minutes
-		go func() {
-			ticker := time.NewTicker(5 * time.Minute)
-			defer ticker.Stop()
-			for range ticker.C {
-				globalLimiter.CleanupOldLimiters()
-				logger.Debugf("rate limiter cleanup completed")
-			}
-		}()
 	})
 }
 
@@ -108,9 +160,6 @@ func rateLimitKey(c *gin.Context) string {
 }
 
 // RateLimitMiddleware creates a rate limiting middleware.
-//
-// Limits requests per IP (or per user if RATE_LIMIT_USE_USER=true and user_id is in context).
-// Reads RATE_LIMIT_RPS and RATE_LIMIT_BURST from config; if unset or <= 0, uses defaults 100 req/s and burst 200.
 func RateLimitMiddleware() gin.HandlerFunc {
 	initRateLimiter()
 
@@ -129,26 +178,53 @@ func RateLimitMiddleware() gin.HandlerFunc {
 	}
 }
 
+var (
+	authLimiterOnce sync.Once
+	authLimiter     *IPRateLimiter
+)
+
+func authRateLimiter() *IPRateLimiter {
+	authLimiterOnce.Do(func() {
+		rpm, burst := 5, 5
+		if c := config.Get(); c != nil {
+			if c.Server.AuthRateLimitRPM > 0 {
+				rpm = c.Server.AuthRateLimitRPM
+			}
+			if c.Server.AuthRateLimitBurst > 0 {
+				burst = c.Server.AuthRateLimitBurst
+			}
+		}
+		limit := rate.Limit(float64(rpm) / 60.0)
+		authLimiter = NewIPRateLimiter(limit, burst)
+	})
+	return authLimiter
+}
+
+// AuthRateLimitMiddleware applies a stricter per-IP limit to authentication routes.
+func AuthRateLimitMiddleware() gin.HandlerFunc {
+	limiter := authRateLimiter()
+	return rateLimitMiddlewareWithLimiter(limiter)
+}
+
+func rateLimitMiddlewareWithLimiter(limiter *IPRateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		key := c.ClientIP()
+		ipLimiter := limiter.GetLimiter(key)
+
+		if !ipLimiter.Allow() {
+			logger.Warnf("auth rate limit exceeded for key: %s", key)
+			utils.TooManyRequests(c, nil, "Rate limit exceeded. Please try again later.")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // RateLimitMiddlewareWithConfig creates a rate limiting middleware with custom config
-//
-// Parameters:
-//   - requestsPerSecond: Maximum requests allowed per second
-//   - burst: Maximum burst size (allows temporary spikes)
-//
-// Example:
-//
-//	router.Use(middlewares.RateLimitMiddlewareWithConfig(50, 100))
 func RateLimitMiddlewareWithConfig(requestsPerSecond int, burst int) gin.HandlerFunc {
 	limiter := NewIPRateLimiter(rate.Limit(requestsPerSecond), burst)
-
-	// Cleanup periodically
-	go func() {
-		ticker := time.NewTicker(5 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			limiter.CleanupOldLimiters()
-		}
-	}()
 
 	return func(c *gin.Context) {
 		ip := c.ClientIP()

@@ -7,15 +7,12 @@ import (
 )
 
 type ServerConfiguration struct {
-	Host      string
-	Port      string
-	JWTSecret string
-	Debug     bool
-	// AllowedHosts is reserved for future Host-header validation; it is NOT
-	// used for CORS (see CORSAllowedOrigins) or reverse proxy trust (see
-	// TrustedProxies).
-	AllowedHosts           string
-	LimitCountPerRequest   int64
+	Host                   string
+	Port                   string
+	JWTSecret              string
+	JWTIssuer              string // written into and required on access tokens
+	JWTAudience            string // written into and required on access tokens
+	Debug                  bool
 	Timezone               string // IANA name, e.g. UTC, Asia/Jakarta
 	RequestTimeoutSeconds  int    // http.Server read/write timeout
 	ShutdownTimeoutSeconds int    // graceful shutdown max wait
@@ -25,6 +22,9 @@ type ServerConfiguration struct {
 	RateLimitRPS     int
 	RateLimitBurst   int
 	RateLimitUseUser bool
+	// AuthRateLimitRPM / AuthRateLimitBurst apply stricter per-IP limits on /auth routes only.
+	AuthRateLimitRPM   int
+	AuthRateLimitBurst int
 	// CORSAllowedOrigins is the allowlist of exact frontend origins permitted
 	// to make cross-origin requests. Never contains "*".
 	CORSAllowedOrigins []string

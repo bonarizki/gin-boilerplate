@@ -1,12 +1,14 @@
 package seeders
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // demoPassword is the login password for every seeded demo user.
@@ -23,8 +25,8 @@ var demoUsers = []struct {
 	{"Demo User", "user@example.local"},
 }
 
-func seedDemoUsers() error {
-	userRepo := repositories.NewUserRepository()
+func seedDemoUsers(ctx context.Context, db *gorm.DB) error {
+	userRepo := repositories.NewUserRepository(db)
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(demoPassword), bcrypt.DefaultCost)
 	if err != nil {
@@ -32,7 +34,7 @@ func seedDemoUsers() error {
 	}
 
 	for _, u := range demoUsers {
-		existing, err := userRepo.GetUserByEmail(u.Email)
+		existing, err := userRepo.GetUserByEmail(ctx, u.Email)
 		if err != nil {
 			return err
 		}
@@ -40,7 +42,7 @@ func seedDemoUsers() error {
 			continue
 		}
 
-		if err := userRepo.CreateUser(&models.User{
+		if err := userRepo.CreateUser(ctx, &models.User{
 			Name:     u.Name,
 			Email:    u.Email,
 			Password: string(hashed),

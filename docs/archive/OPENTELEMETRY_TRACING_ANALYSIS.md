@@ -1,3 +1,5 @@
+> **Archived, point-in-time document.** Written before the dependency-injection and context refactor; code references may be out of date. Kept for history only.
+
 # OpenTelemetry Tracing: Implementation Analysis
 
 > Discussion document before implementation. Not an implementation guide.

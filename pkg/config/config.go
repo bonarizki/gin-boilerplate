@@ -1,7 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
@@ -36,10 +39,27 @@ func SetForTest(c *Configuration) {
 // SetupConfig loads and validates configuration from .env file
 // and stores it in the global config (accessible via Get()).
 func SetupConfig() error {
-	viper.SetConfigFile(".env")
+	viper.AutomaticEnv()
+	if path := os.Getenv("CONFIG_FILE"); path != "" {
+		viper.SetConfigFile(path)
+	} else {
+		viper.SetConfigFile(".env")
+	}
 	if err := viper.ReadInConfig(); err != nil {
-		logger.Errorf("Error reading config file, %s", err)
-		return fmt.Errorf("failed to read config file: %w", err)
+		var notFound viper.ConfigFileNotFoundError
+		if errors.As(err, &notFound) || os.IsNotExist(err) || strings.Contains(err.Error(), "no such file") {
+			logger.Infof("No config file; using environment variables")
+		} else {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
+	}
+
+	logFormat := viper.GetString("LOG_FORMAT")
+	if logFormat == "" && GetEnvironment() == EnvProduction {
+		logFormat = "json"
+	}
+	if err := logger.Configure(viper.GetString("LOG_LEVEL"), logFormat); err != nil {
+		return err
 	}
 
 	if err := ValidateConfig(); err != nil {
@@ -50,12 +70,8 @@ func SetupConfig() error {
 	debug := false
 	if viper.IsSet("DEBUG") {
 		debug = viper.GetBool("DEBUG")
-	} else if viper.GetString("APP_ENV") == "" || viper.GetString("APP_ENV") == EnvDevelopment {
+	} else if GetEnvironment() == EnvDevelopment {
 		debug = true
-	}
-	allowedHosts := viper.GetString("ALLOWED_HOSTS")
-	if allowedHosts == "" {
-		allowedHosts = "0.0.0.0"
 	}
 	rps := viper.GetInt("RATE_LIMIT_RPS")
 	if rps <= 0 {
@@ -64,6 +80,14 @@ func SetupConfig() error {
 	burst := viper.GetInt("RATE_LIMIT_BURST")
 	if burst <= 0 {
 		burst = 200
+	}
+	authRPM := viper.GetInt("AUTH_RATE_LIMIT_RPM")
+	if authRPM <= 0 {
+		authRPM = 5
+	}
+	authBurst := viper.GetInt("AUTH_RATE_LIMIT_BURST")
+	if authBurst <= 0 {
+		authBurst = 5
 	}
 	timezone := viper.GetString("SERVER_TIMEZONE")
 	if timezone == "" {
@@ -102,8 +126,9 @@ func SetupConfig() error {
 			Host:                   viper.GetString("SERVER_HOST"),
 			Port:                   viper.GetString("SERVER_PORT"),
 			JWTSecret:              viper.GetString("JWT_SECRET"),
+			JWTIssuer:              stringOr(viper.GetString("JWT_ISSUER"), "gin-boilerplate"),
+			JWTAudience:            stringOr(viper.GetString("JWT_AUDIENCE"), "gin-boilerplate-api"),
 			Debug:                  debug,
-			AllowedHosts:           allowedHosts,
 			Timezone:               timezone,
 			RequestTimeoutSeconds:  requestTimeout,
 			ShutdownTimeoutSeconds: shutdownTimeout,
@@ -112,6 +137,8 @@ func SetupConfig() error {
 			RateLimitRPS:           rps,
 			RateLimitBurst:         burst,
 			RateLimitUseUser:       viper.GetBool("RATE_LIMIT_USE_USER"),
+			AuthRateLimitRPM:       authRPM,
+			AuthRateLimitBurst:     authBurst,
 			CORSAllowedOrigins:     corsOrigins,
 			TrustedProxies:         trustedProxies,
 		},
@@ -129,6 +156,10 @@ func SetupConfig() error {
 			ReplicaHost:     viper.GetString("REPLICA_DB_HOST"),
 			ReplicaPort:     viper.GetString("REPLICA_DB_PORT"),
 			ReplicaSslMode:  replicaSsl,
+			MaxOpenConns:    dbPoolInt("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:    dbPoolInt("DB_MAX_IDLE_CONNS", 5),
+			ConnMaxLifetime: dbPoolInt("DB_CONN_MAX_LIFETIME", 30),
+			ConnMaxIdleTime: dbPoolInt("DB_CONN_MAX_IDLE_TIME", 5),
 		},
 	}
 	if appConfig.Server.Port == "" {
@@ -179,6 +210,14 @@ func ValidateConfig() error {
 		return fmt.Errorf("missing required config keys: %s", strings.Join(missingKeys, ", "))
 	}
 
+	if env := viper.GetString("APP_ENV"); env != "" {
+		switch env {
+		case EnvDevelopment, EnvStaging, EnvProduction:
+		default:
+			return fmt.Errorf("APP_ENV must be %s, %s, or %s", EnvDevelopment, EnvStaging, EnvProduction)
+		}
+	}
+
 	// Validate JWT_SECRET is not using example value
 	jwtSecret := viper.GetString("JWT_SECRET")
 	if strings.Contains(strings.ToUpper(jwtSecret), "CHANGE-THIS") ||
@@ -187,10 +226,14 @@ func ValidateConfig() error {
 		return fmt.Errorf("JWT_SECRET must be changed from example value and be at least 32 characters long. Generate with: openssl rand -base64 32")
 	}
 
-	// Validate port is numeric
 	port := viper.GetString("SERVER_PORT")
-	if port == "" {
-		return fmt.Errorf("SERVER_PORT cannot be empty")
+	portNum, err := strconv.Atoi(port)
+	if err != nil || portNum < 1 || portNum > 65535 {
+		return fmt.Errorf("SERVER_PORT must be an integer between 1 and 65535")
+	}
+
+	if err := validateReplicaConfig(); err != nil {
+		return err
 	}
 
 	// Validate CORS origins (required in production; must be well-formed everywhere)
@@ -220,12 +263,12 @@ func GetBool(key string) bool {
 
 // Environment helper functions
 
-// GetEnvironment returns the current application environment
-// Defaults to "development" if APP_ENV is not set
+// GetEnvironment returns the current application environment.
+// Defaults to production when APP_ENV is unset so deployments are not accidentally opened as dev.
 func GetEnvironment() string {
 	env := viper.GetString("APP_ENV")
 	if env == "" {
-		return EnvDevelopment
+		return EnvProduction
 	}
 	return env
 }
@@ -255,4 +298,39 @@ func IsDebugEnabled() bool {
 
 	// Otherwise, default to true for development, false for others
 	return IsDevelopment()
+}
+
+func dbPoolInt(key string, def int) int {
+	v := viper.GetInt(key)
+	if v <= 0 {
+		return def
+	}
+	return v
+}
+
+func validateReplicaConfig() error {
+	replicaKeys := []string{
+		"REPLICA_DB_NAME", "REPLICA_DB_USER", "REPLICA_DB_PASSWORD",
+		"REPLICA_DB_HOST", "REPLICA_DB_PORT",
+	}
+	var setCount int
+	for _, key := range replicaKeys {
+		if viper.IsSet(key) && strings.TrimSpace(viper.GetString(key)) != "" {
+			setCount++
+		}
+	}
+	if setCount == 0 {
+		return nil
+	}
+	if setCount != len(replicaKeys) {
+		return fmt.Errorf("replica database requires all of: %s", strings.Join(replicaKeys, ", "))
+	}
+	return nil
+}
+
+func stringOr(v, fallback string) string {
+	if v == "" {
+		return fallback
+	}
+	return v
 }

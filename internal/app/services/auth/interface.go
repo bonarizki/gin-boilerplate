@@ -12,7 +12,7 @@ type AuthServicer interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error)
 	Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error)
 	RefreshToken(ctx context.Context, req *dto.RefreshTokenRequest) (*dto.RefreshTokenResponse, error)
-	ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) (string, error)
+	ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) error
 	ResetPassword(ctx context.Context, req *dto.ResetPasswordRequest) error
 	ValidateToken(token string) (uint, error)
 	// GetProfile returns the current user's profile data. Returns ErrUserNotFound if userID doesn't exist.

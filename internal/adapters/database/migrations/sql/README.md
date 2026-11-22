@@ -68,11 +68,11 @@ This will create:
 
 ## Integration with Application
 
-Migrations run automatically on every app startup via `migrations.Migrate()`, which reuses the app's existing GORM/Postgres connection (`database.DB.DB()`) instead of opening a second one:
+Migrations run automatically on every app startup via `migrations.Migrate(db)`, which reuses the app's existing GORM/Postgres connection instead of opening a second one:
 
 ```go
-func Migrate() error {
-    sqlDB, _ := database.DB.DB()
+func Migrate(db *gorm.DB) error {
+    sqlDB, _ := db.DB()
     driver, _ := migratepostgres.WithInstance(sqlDB, &migratepostgres.Config{})
     m, _ := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
     return m.Up() // ErrNoChange treated as success; any other error is fatal to boot

@@ -151,7 +151,7 @@ spec:
 
 - **`CheckHealth(ctx context.Context)`** returns overall `"healthy"` only if every registered checker returns `"ok"`.
 - **`AddChecker(name string, c HealthChecker)`** registers a dependency checker. The **HealthChecker** interface has a single method: `Check(ctx context.Context) (string, error)` returning `"ok"` or `"error"`.
-- The database is registered as a checker (e.g. `HealthService.AddChecker("database", &services.DatabaseChecker{})`) at startup. No direct `checkDatabase()` method; all checks go through the interface.
+- The database is registered as a checker (e.g. `healthService.AddChecker("database", services.DatabaseChecker{DB: sqlDB})` in `main.go`) at startup. No direct `checkDatabase()` method; all checks go through the interface.
 
 See [internal/app/services/health_service.go](../internal/app/services/health_service.go) for the full implementation.
 
@@ -348,16 +348,14 @@ X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
 X-Request-ID: 550e8400-e29b-41d4-a716-446655440000
 ```
 
-### Structured Request Logging (ARRIVED / START / FINISH / RESPONSE SENT)
+### Structured Request Logging (ARRIVED / RESPONSE SENT)
 
-Every request produces a consistent log sequence so you can trace flow and duration:
+Every request produces two log lines from `RequestLogMiddleware`, both tagged with the request ID:
 
-- **ARRIVED REQUEST** — Logged by middleware at request entry (IP, method, path, query, body; sensitive fields masked).
-- **START** — Logged at entry of each controller and service method (e.g. `START HealthController.Health`, `START HealthService.CheckHealth`).
-- **FINISH** — Logged at exit with success/fail and duration (e.g. `FINISH HealthService.CheckHealth (SUCCESS) duration=24ms`).
-- **RESPONSE SENT** — Logged by middleware after response (status, duration, size, body; sensitive fields masked).
+- **ARRIVED REQUEST** — at request entry (IP, method, path, masked query; body only when `LOG_REQUEST_BODIES` is on).
+- **RESPONSE SENT** — after the handler (status, duration, size; masked body when enabled).
 
-START/FINISH are always on (no DEBUG or env flag). They are produced by explicit **LogStart** and **LogFinish** calls (call LogFinish before every return), not by defer. Services receive `context.Context` so request_id flows from HTTP to service layer.
+Handlers and services do not log START/FINISH lines. Application log lines inside a request use `logger.FromContext(ctx)` so they carry the same `request_id`.
 
 ### Sensitive Data Masking
 
@@ -369,17 +367,14 @@ Use the logger from `pkg/logger` for all application logs. Request ID is injecte
 
 | API | Use case |
 |-----|----------|
-| **LogStart(ctx, spanName)** | Start a traced span. Returns `(context.Context, time.Time)`. Controllers: `logger.LogStart(c.Request.Context(), "ControllerName.Method")`. Services: `logger.LogStart(ctx, "ServiceName.Method")`. |
-| **LogFinish(ctx, spanName, err, start)** | End the span and log FINISH with SUCCESS/FAIL and duration (float ms). **Call before every return** in handlers and service methods. |
 | **FromContext(ctx)** | Get a log entry that includes `request_id` from context. Use for ad-hoc log lines inside a request: `logger.FromContext(ctx).Infof("message")`. |
 | **WithRequestID(requestID)** | Get a log entry with a specific request_id (e.g. when you only have the ID string). Use when outside the normal request flow. |
 | **Infof / Errorf / Warnf / Debugf** | Standard level logging. Prefer `FromContext(ctx).Infof(...)` inside handlers/services so request_id is included. |
 
 **Rules:**
 
-- Every HTTP handler that does meaningful work should call `LogStart` at entry and `LogFinish` before every return (all error and success paths).
-- Every service method called from those handlers should do the same: `LogStart(ctx, "ServiceName.Method")` and `LogFinish(ctx, "ServiceName.Method", err, start)` before each return.
-- Use the same `ctx` returned from `LogStart` when calling services so request_id propagates.
+- Pass `c.Request.Context()` from handlers into services, and from services into repositories.
+- Inside a request, log with `logger.FromContext(ctx)` rather than the package-level `logger.Infof`.
 - Do not log raw request/response bodies containing passwords or tokens; middleware already logs masked bodies. For ad-hoc logs use `utils.MaskSensitiveJSON` if needed (see `pkg/utils/mask`).
 
 ### Using Request ID in Code
@@ -387,32 +382,24 @@ Use the logger from `pkg/logger` for all application logs. Request ID is injecte
 **In Controllers:**
 ```go
 func (ctrl *UserController) GetUser(c *gin.Context) {
-    ctx, start := logger.LogStart(c.Request.Context(), "UserController.GetUser")
-
-    user, err := ctrl.service.GetUser(ctx, userID)
+    user, err := ctrl.service.GetUser(c.Request.Context(), userID)
     if err != nil {
-        logger.LogFinish(ctx, "UserController.GetUser", err, start)
         utils.InternalServerError(c, err, "Failed to get user")
         return
     }
-    logger.LogFinish(ctx, "UserController.GetUser", nil, start)
     utils.Ok(c, user, "User retrieved successfully")
 }
 ```
 
 **In Services (use context.Context):**
 ```go
-func (s *UserService) GetUser(ctx context.Context, userID string) (*models.User, error) {
-    ctx, start := logger.LogStart(ctx, "UserService.GetUser")
-
-    logger.FromContext(ctx).Infof("fetching user %s", userID)
-    // Business logic...
-    logger.LogFinish(ctx, "UserService.GetUser", nil, start)
-    return user, nil
+func (s *UserService) GetUser(ctx context.Context, userID uint) (*models.User, error) {
+    logger.FromContext(ctx).Infof("fetching user %d", userID)
+    return s.repo.GetUserByID(ctx, userID)
 }
 ```
 
-Request ID is stored in `c.Request.Context()` by middleware. Controllers call `logger.LogStart(c.Request.Context(), spanName)` and pass the returned `ctx` into services; services call `logger.LogStart(ctx, spanName)` and `logger.LogFinish(ctx, spanName, err, start)` before every return. Use `logger.FromContext(ctx)` for ad-hoc log lines so every log line includes the same request_id.
+Request ID is stored in `c.Request.Context()` by `RequestIDMiddleware`; the same context reaches the database through the repositories, so a cancelled request also cancels its queries.
 
 ### Optional: Distributed tracing (OpenTelemetry)
 
@@ -428,7 +415,7 @@ This boilerplate currently provides request ID only; add OpenTelemetry when you 
 
 ```bash
 # Find all logs for a specific request
-grep "550e8400-e29b-41d4-a716-446655440000" app.log
+docker compose logs app | grep "550e8400-e29b-41d4-a716-446655440000"
 
 # Example output (structured request logging):
 # INFO 2025-11-09T10:30:00+07:00 [550e8400-e29b-41d4-a716-446655440000] ARRIVED REQUEST from IP=192.168.1.1 method=POST path=/auth/register query= body={}
@@ -467,7 +454,7 @@ try {
 ```
 1. User reports error
 2. User provides request ID: 550e8400-e29b-41d4-a716-446655440000
-3. Support team searches logs: grep "550e8400..." app.log
+3. Support team searches logs: grep "550e8400..." in the log aggregator
 4. Can see exact error and flow
 ```
 
@@ -503,7 +490,7 @@ Client → Load Balancer → API → Database
 REQUEST_ID="550e8400-e29b-41d4-a716-446655440000"
 
 # 2. Search logs
-grep "$REQUEST_ID" app.log
+docker compose logs app | grep "$REQUEST_ID"
 
 # Output shows timing:
 # [10:30:00.100] [550e8400...] POST /checkout started
@@ -817,13 +804,7 @@ logger.WithRequestID(requestID).Infof("User created")
 logger.FromContext(ctx).Infof("User created")
 ```
 
-2. **Use LogStart/LogFinish for consistent tracing:**
-```go
-ctx, start := logger.LogStart(c.Request.Context(), "UserController.Create")
-// ... handler logic ...
-logger.LogFinish(ctx, "UserController.Create", err, start)
-// then return
-```
+2. **Pass the request context down** so `FromContext(ctx)` can find the ID.
 
 ### High Memory Usage
 

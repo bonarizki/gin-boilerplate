@@ -6,25 +6,39 @@ import (
 	"testing"
 
 	"github.com/bonarizki/gin-boilerplate/internal/app/routers"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/tests/integration/testdb"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-// TestHealthEndpoint tests GET /health without initializing database.
-// When DB is not initialized, health returns 503 and status "unhealthy".
-// For 200 "healthy", run with database configured (e.g. in CI with test DB).
-func TestHealthEndpoint(t *testing.T) {
+func healthRouter(checker services.DatabaseChecker) *gin.Engine {
 	gin.SetMode(gin.TestMode)
+	svc := services.NewHealthService()
+	svc.AddChecker("database", checker)
 	router := gin.New()
-	routers.RegisterHealthRoutes(router)
+	routers.RegisterHealthRoutes(router, svc)
+	return router
+}
 
+func getHealth(router *gin.Engine) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
-	router.ServeHTTP(w, req)
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/health", nil))
+	return w
+}
 
-	// Without DB init, we expect 503 unhealthy; with DB, would be 200 healthy
-	assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusServiceUnavailable,
-		"expected 200 or 503, got %d", w.Code)
-	assert.Contains(t, w.Body.String(), "status",
-		"response body should contain status field")
+func TestHealth_DatabaseDownIs503(t *testing.T) {
+	w := getHealth(healthRouter(services.DatabaseChecker{}))
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Contains(t, w.Body.String(), `"status":"unhealthy"`)
+}
+
+func TestHealth_DatabaseUpIs200(t *testing.T) {
+	sqlDB, err := testdb.Open(t).DB()
+	require.NoError(t, err)
+
+	w := getHealth(healthRouter(services.DatabaseChecker{DB: sqlDB}))
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"status":"healthy"`)
 }

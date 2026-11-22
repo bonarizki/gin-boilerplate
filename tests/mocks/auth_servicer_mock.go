@@ -17,7 +17,7 @@ type MockAuthServicer struct {
 	RegisterFunc       func(context.Context, *dto.RegisterRequest) (*dto.AuthResponse, error)
 	LoginFunc          func(context.Context, *dto.LoginRequest) (*dto.AuthResponse, error)
 	RefreshTokenFunc   func(context.Context, *dto.RefreshTokenRequest) (*dto.RefreshTokenResponse, error)
-	ForgotPasswordFunc func(context.Context, *dto.ForgotPasswordRequest) (string, error)
+	ForgotPasswordFunc func(context.Context, *dto.ForgotPasswordRequest) error
 	ResetPasswordFunc  func(context.Context, *dto.ResetPasswordRequest) error
 	ValidateTokenFunc  func(string) (uint, error)
 	LogoutFunc         func(context.Context, *dto.LogoutRequest) error
@@ -46,11 +46,11 @@ func (m *MockAuthServicer) RefreshToken(ctx context.Context, req *dto.RefreshTok
 	return nil, nil
 }
 
-func (m *MockAuthServicer) ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) (string, error) {
+func (m *MockAuthServicer) ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) error {
 	if m.ForgotPasswordFunc != nil {
 		return m.ForgotPasswordFunc(ctx, req)
 	}
-	return "", nil
+	return nil
 }
 
 func (m *MockAuthServicer) ResetPassword(ctx context.Context, req *dto.ResetPasswordRequest) error {

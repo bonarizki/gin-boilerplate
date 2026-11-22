@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main, fix/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: gin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d gin_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DB_MASTER_DSN: postgres://test:test@localhost:5432/gin_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test -race -p 1 -coverpkg=./internal/...,./pkg/... -coverprofile=coverage.out ./tests/...
+      - name: Coverage floor
+        run: |
+          go tool cover -func=coverage.out | tail -1
+          go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/,""); if ($3 < 50) { print "coverage " $3 "% is below 50%"; exit 1 }}'

@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -133,15 +135,23 @@ func sendErrorResponse(c *gin.Context, code int, message string, data interface{
 // HandleErrors sends an error response in a standard format.
 // If the error is a validation error, it will return detailed field errors.
 func HandleErrors(c *gin.Context, code int, err error, message string) {
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		sendErrorResponse(c, http.StatusRequestEntityTooLarge, "", nil,
+			gin.H{"error": fmt.Sprintf("request body exceeds %d bytes", tooLarge.Limit)})
+		return
+	}
 	if errs, ok := err.(validator.ValidationErrors); ok {
 		sendErrorResponse(c, code, message, nil, FormatValidationErrors(errs))
 		return
 	}
-	errMsg := message
-	if err != nil {
-		errMsg = err.Error()
+	clientMsg := message
+	if code >= http.StatusInternalServerError || code == http.StatusUnauthorized {
+		clientMsg = message
+	} else if err != nil {
+		clientMsg = err.Error()
 	}
-	sendErrorResponse(c, code, message, nil, gin.H{"error": errMsg})
+	sendErrorResponse(c, code, message, nil, gin.H{"error": clientMsg})
 }
 
 // HandleErrorsWithData sends an error response with a data payload (standard format).

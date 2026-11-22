@@ -3,16 +3,20 @@ name: go-gin-boilerplate
 services:
   postgres_db:
     container_name: core_pg_db
-    image: postgres:13-alpine
-    env_file:
-      - ../.env
+    image: postgres:17-alpine
     environment:
-      - POSTGRES_USER=${MASTER_DB_USER}
-      - POSTGRES_PASSWORD=${MASTER_DB_PASSWORD}
-      - POSTGRES_DB=${MASTER_DB_NAME}
+      POSTGRES_USER: ${MASTER_DB_USER}
+      POSTGRES_PASSWORD: ${MASTER_DB_PASSWORD}
+      POSTGRES_DB: ${MASTER_DB_NAME}
     volumes:
       - prod_postgres_data:/var/lib/postgresql/data/
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MASTER_DB_USER} -d ${MASTER_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   server:
     container_name: go_server
@@ -22,10 +26,11 @@ services:
     ports:
       - "${SERVER_PORT}:${SERVER_PORT}"
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     env_file:
       - ../.env
-    restart: on-failure
+    restart: unless-stopped
 
 volumes:
   prod_postgres_data:

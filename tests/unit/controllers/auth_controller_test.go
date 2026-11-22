@@ -11,7 +11,6 @@ import (
 	"github.com/bonarizki/gin-boilerplate/internal/app/controllers"
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
-	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 	"github.com/bonarizki/gin-boilerplate/tests/mocks"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -24,9 +23,11 @@ func setupTestRouter() *gin.Engine {
 	return router
 }
 
-// setupAuthController creates an AuthController with real AuthService (for integration-style tests).
+// setupAuthController creates an AuthController backed by a real AuthService
+// over in-memory repositories.
 func setupAuthController() *controllers.AuthController {
-	authService := auth.NewAuthService(repositories.NewUserRepository(), repositories.NewRefreshTokenRepository(), nil)
+	authService := auth.NewAuthService(mocks.NewMockUserRepository(), mocks.NewMockRefreshTokenRepository(), nil,
+		auth.Config{JWTSecret: "bench-jwt-secret-at-least-32-characters-long"})
 	return controllers.NewAuthController(authService)
 }
 

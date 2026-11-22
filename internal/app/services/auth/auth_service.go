@@ -7,13 +7,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
-	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,21 +25,41 @@ var (
 	ErrEmailAlreadyExists  = errors.New("email already exists")
 	ErrInvalidCredentials  = errors.New("invalid email or password")
 	ErrUserNotFound        = errors.New("user not found")
+	ErrMailerNotConfigured = errors.New("password reset mailer not configured")
 	ErrInvalidRefreshToken = errors.New("invalid or expired refresh token")
 	ErrInvalidResetToken   = errors.New("invalid or expired reset token")
 	ErrResetTokenExpired   = errors.New("reset token has expired")
 )
 
+// Config holds the token settings AuthService needs. Zero TTLs fall back to
+// 15 minutes (access) and 7 days (refresh).
+type Config struct {
+	JWTSecret string
+	Issuer    string
+	Audience  string
+	// AccessTTL is kept short because access tokens are stateless and cannot
+	// be revoked; logout only revokes refresh tokens.
+	AccessTTL  time.Duration
+	RefreshTTL time.Duration
+}
+
 // AuthService handles authentication-related business logic
 type AuthService struct {
 	userRepo         repositories.UserRepository
 	refreshTokenRepo repositories.RefreshTokenRepository
-	mailer           EmailSender // optional; when set, ForgotPassword sends token via email instead of returning it
+	mailer           EmailSender // nil disables ForgotPassword (ErrMailerNotConfigured)
+	cfg              Config
 }
 
-// NewAuthService creates a new AuthService instance. mailer may be nil (token returned in response for dev/testing).
-func NewAuthService(userRepo repositories.UserRepository, refreshTokenRepo repositories.RefreshTokenRepository, mailer EmailSender) *AuthService {
-	return &AuthService{userRepo: userRepo, refreshTokenRepo: refreshTokenRepo, mailer: mailer}
+// NewAuthService creates a new AuthService instance.
+func NewAuthService(userRepo repositories.UserRepository, refreshTokenRepo repositories.RefreshTokenRepository, mailer EmailSender, cfg Config) *AuthService {
+	if cfg.AccessTTL <= 0 {
+		cfg.AccessTTL = 15 * time.Minute
+	}
+	if cfg.RefreshTTL <= 0 {
+		cfg.RefreshTTL = 7 * 24 * time.Hour
+	}
+	return &AuthService{userRepo: userRepo, refreshTokenRepo: refreshTokenRepo, mailer: mailer, cfg: cfg}
 }
 
 // Register creates a new user account with validation and password hashing.
@@ -45,25 +67,22 @@ func NewAuthService(userRepo repositories.UserRepository, refreshTokenRepo repos
 // Returns ErrEmailAlreadyExists if email is already registered.
 // Password is hashed using bcrypt before storage.
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (resp *dto.AuthResponse, err error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.Register")
+	req.Email = normalizeEmail(req.Email)
 
-	existingUser, err := s.userRepo.GetUserByEmail(req.Email)
+	existingUser, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
 
 	if existingUser != nil {
-		logger.Warnf("registration attempt with existing email: %s", req.Email)
-		logger.LogFinish(ctx, "AuthService.Register", ErrEmailAlreadyExists, start)
+		logger.FromContext(ctx).Warnf("registration attempt with existing email: %s", utils.MaskEmail(req.Email))
 		return nil, ErrEmailAlreadyExists
 	}
 
 	// Hash password
 	hashedPassword, err := s.hashPassword(req.Password)
 	if err != nil {
-		logger.Errorf("failed to hash password: %v", err)
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
+		logger.FromContext(ctx).Errorf("failed to hash password: %v", err)
 		return nil, fmt.Errorf("failed to process password: %w", err)
 	}
 
@@ -75,16 +94,14 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 	}
 
 	// Save to database
-	if err = s.userRepo.CreateUser(user); err != nil {
-		logger.Errorf("failed to create user: %v", err)
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
+	if err = s.userRepo.CreateUser(ctx, user); err != nil {
+		logger.FromContext(ctx).Errorf("failed to create user: %v", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	logger.Infof("user registered successfully: %s", user.Email)
+	logger.FromContext(ctx).Infof("user registered successfully: %s", utils.MaskEmail(user.Email))
 
-	response, err := s.issueAuthResponse(user)
-	logger.LogFinish(ctx, "AuthService.Register", err, start)
+	response, err := s.issueAuthResponse(ctx, user)
 	return response, err
 }
 
@@ -92,53 +109,49 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 //
 // Returns ErrInvalidCredentials if email or password is incorrect.
 func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (resp *dto.AuthResponse, err error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.Login")
+	req.Email = normalizeEmail(req.Email)
 
-	user, err := s.userRepo.GetUserByEmail(req.Email)
+	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		logger.Errorf("failed to get user: %v", err)
-		logger.LogFinish(ctx, "AuthService.Login", err, start)
+		logger.FromContext(ctx).Errorf("failed to get user: %v", err)
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
 	if user == nil {
-		logger.Warnf("login attempt with non-existent email: %s", req.Email)
-		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
+		logger.FromContext(ctx).Warnf("login attempt with non-existent email: %s", utils.MaskEmail(req.Email))
 		return nil, ErrInvalidCredentials
 	}
 
 	// Verify password
 	if err = s.verifyPassword(user.Password, req.Password); err != nil {
-		logger.Warnf("login attempt with invalid password: %s", req.Email)
-		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
+		logger.FromContext(ctx).Warnf("login attempt with invalid password: %s", utils.MaskEmail(req.Email))
 		return nil, ErrInvalidCredentials
 	}
 
-	logger.Infof("user logged in successfully: %s", user.Email)
+	logger.FromContext(ctx).Infof("user logged in successfully: %s", utils.MaskEmail(user.Email))
 
-	response, err := s.issueAuthResponse(user)
-	logger.LogFinish(ctx, "AuthService.Login", err, start)
+	response, err := s.issueAuthResponse(ctx, user)
 	return response, err
 }
 
 // issueAuthResponse generates an access token and a new refresh token rotation
 // chain (new session/family) for user, and builds the resulting AuthResponse.
 // Shared by Register and Login since both start a new session identically.
-func (s *AuthService) issueAuthResponse(user *models.User) (*dto.AuthResponse, error) {
+func (s *AuthService) issueAuthResponse(ctx context.Context, user *models.User) (*dto.AuthResponse, error) {
 	accessToken, err := s.generateToken(user)
 	if err != nil {
-		logger.Errorf("failed to generate access token: %v", err)
+		logger.FromContext(ctx).Errorf("failed to generate access token: %v", err)
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	familyID, err := s.newFamilyID()
 	if err != nil {
-		logger.Errorf("failed to generate token family id: %v", err)
+		logger.FromContext(ctx).Errorf("failed to generate token family id: %v", err)
 		return nil, fmt.Errorf("failed to generate token family id: %w", err)
 	}
-	refreshToken, err := s.issueRefreshToken(user.ID, familyID)
+	refreshToken, err := s.issueRefreshToken(ctx, user.ID, familyID)
 	if err != nil {
-		logger.Errorf("failed to issue refresh token: %v", err)
+		logger.FromContext(ctx).Errorf("failed to issue refresh token: %v", err)
 		return nil, fmt.Errorf("failed to issue refresh token: %w", err)
 	}
 
@@ -154,71 +167,67 @@ func (s *AuthService) issueAuthResponse(user *models.User) (*dto.AuthResponse, e
 	}, nil
 }
 
-// ValidateToken validates a JWT token and returns the user ID.
+// accessClaims is the JWT payload issued by generateToken.
+type accessClaims struct {
+	UserID uint   `json:"user_id"`
+	Email  string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+// ValidateToken validates a JWT access token and returns the user ID.
 //
-// Returns error if token is invalid, expired, or malformed.
+// Only HS256 is accepted, and exp, iss and aud (when configured) are required.
 func (s *AuthService) ValidateToken(tokenString string) (uint, error) {
-	secret := s.jwtSecret()
-	if secret == "" {
+	if s.cfg.JWTSecret == "" {
 		return 0, errors.New("JWT secret not configured")
 	}
+	opts := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithLeeway(30 * time.Second),
+	}
+	if s.cfg.Issuer != "" {
+		opts = append(opts, jwt.WithIssuer(s.cfg.Issuer))
+	}
+	if s.cfg.Audience != "" {
+		opts = append(opts, jwt.WithAudience(s.cfg.Audience))
+	}
 
-	// Parse token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Validate signing method
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(secret), nil
-	})
-
+	var claims accessClaims
+	_, err := jwt.ParseWithClaims(tokenString, &claims, func(*jwt.Token) (any, error) {
+		return []byte(s.cfg.JWTSecret), nil
+	}, opts...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse token: %w", err)
 	}
-
-	// Extract claims
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		// Get user ID from claims
-		userID, ok := claims["user_id"].(float64)
-		if !ok {
-			return 0, errors.New("invalid user_id in token")
-		}
-		return uint(userID), nil
+	if claims.UserID == 0 {
+		return 0, errors.New("invalid user_id in token")
 	}
-
-	return 0, errors.New("invalid token")
+	return claims.UserID, nil
 }
 
 // GetProfile returns the current user's profile data.
 //
 // Returns ErrUserNotFound if userID doesn't exist (e.g. deleted after token was issued).
 func (s *AuthService) GetProfile(ctx context.Context, userID uint) (*dto.UserResponse, error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.GetProfile")
-
-	user, err := s.userRepo.GetUserByID(userID)
+	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		logger.Errorf("failed to get user for profile: %v", err)
-		logger.LogFinish(ctx, "AuthService.GetProfile", err, start)
+		logger.FromContext(ctx).Errorf("failed to get user for profile: %v", err)
 		return nil, fmt.Errorf("failed to get profile: %w", err)
 	}
 	if user == nil {
-		logger.LogFinish(ctx, "AuthService.GetProfile", ErrUserNotFound, start)
 		return nil, ErrUserNotFound
 	}
 
-	logger.LogFinish(ctx, "AuthService.GetProfile", nil, start)
 	return &dto.UserResponse{ID: user.ID, Name: user.Name, Email: user.Email}, nil
 }
 
-// Private helper methods
-
-// jwtSecret returns the JWT secret from config. Empty if config not loaded or not set.
-func (s *AuthService) jwtSecret() string {
-	if c := config.Get(); c != nil {
-		return c.Server.JWTSecret
-	}
-	return ""
+// normalizeEmail lowercases and trims an email address for consistent lookups and storage.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
+
+// Private helper methods
 
 // hashPassword hashes a plain text password using bcrypt.
 func (s *AuthService) hashPassword(password string) (string, error) {
@@ -234,45 +243,31 @@ func (s *AuthService) verifyPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-// accessTokenTTL returns the configured JWT access token lifetime, defaulting to 15 minutes.
-//
-// Kept short because access tokens are stateless and cannot be revoked; logout/logout-all
-// only revoke refresh tokens, so a short TTL bounds how long an already-issued access token
-// keeps working after the user logs out.
-func (s *AuthService) accessTokenTTL() time.Duration {
-	if c := config.Get(); c != nil && c.Server.AccessTokenTTLMinutes > 0 {
-		return time.Duration(c.Server.AccessTokenTTLMinutes) * time.Minute
-	}
-	return 15 * time.Minute
-}
-
-// generateToken creates a JWT token for authenticated user.
-//
-// Token contains user ID and email in claims.
-// Expiry is configurable via accessTokenTTL() (default 15 minutes).
+// generateToken creates a signed HS256 access token for user that expires
+// after cfg.AccessTTL.
 func (s *AuthService) generateToken(user *models.User) (string, error) {
-	secret := s.jwtSecret()
-	if secret == "" {
+	if s.cfg.JWTSecret == "" {
 		return "", errors.New("JWT secret not configured")
 	}
-
-	// Create claims
-	claims := jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(s.accessTokenTTL()).Unix(),
-		"iat":     time.Now().Unix(),
+	now := time.Now()
+	claims := accessClaims{
+		UserID: user.ID,
+		Email:  user.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strconv.FormatUint(uint64(user.ID), 10),
+			Issuer:    s.cfg.Issuer,
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.AccessTTL)),
+			IssuedAt:  jwt.NewNumericDate(now),
+		},
+	}
+	if s.cfg.Audience != "" {
+		claims.Audience = jwt.ClaimStrings{s.cfg.Audience}
 	}
 
-	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	// Sign token with secret
-	tokenString, err := token.SignedString([]byte(secret))
+	tokenString, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JWTSecret))
 	if err != nil {
 		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
-
 	return tokenString, nil
 }
 
@@ -308,18 +303,10 @@ func (s *AuthService) newFamilyID() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-// refreshTokenTTL returns the configured refresh token lifetime, defaulting to 7 days.
-func (s *AuthService) refreshTokenTTL() time.Duration {
-	if c := config.Get(); c != nil && c.Server.RefreshTokenTTLDays > 0 {
-		return time.Duration(c.Server.RefreshTokenTTLDays) * 24 * time.Hour
-	}
-	return 7 * 24 * time.Hour
-}
-
 // issueRefreshToken generates a new raw refresh token, persists its hash (with
 // expiry) under familyID, and returns the raw token to send to the client.
 // The raw value is never stored; only hashToken(raw) is written to the database.
-func (s *AuthService) issueRefreshToken(userID uint, familyID string) (string, error) {
+func (s *AuthService) issueRefreshToken(ctx context.Context, userID uint, familyID string) (string, error) {
 	raw, err := s.generateRefreshToken()
 	if err != nil {
 		return "", fmt.Errorf("failed to generate refresh token: %w", err)
@@ -329,9 +316,9 @@ func (s *AuthService) issueRefreshToken(userID uint, familyID string) (string, e
 		UserID:    userID,
 		TokenHash: hashToken(raw),
 		FamilyID:  familyID,
-		ExpiresAt: time.Now().Add(s.refreshTokenTTL()),
+		ExpiresAt: time.Now().Add(s.cfg.RefreshTTL),
 	}
-	if err := s.refreshTokenRepo.Create(record); err != nil {
+	if err := s.refreshTokenRepo.Create(ctx, record); err != nil {
 		return "", fmt.Errorf("failed to save refresh token: %w", err)
 	}
 	return raw, nil

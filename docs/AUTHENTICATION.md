@@ -252,8 +252,8 @@ User → POST /api/v1/auth/register → AuthController → AuthService → Repos
 In production, the reset token should be sent by email instead of returned in the API response. The boilerplate supports this via a pluggable **EmailSender** interface:
 
 - **Interface:** `auth.EmailSender` with a single method `SendPasswordResetEmail(to, resetToken string) error`. Implement this in your project (e.g. SMTP, SendGrid, SES).
-- **Wire-up:** Pass your implementation into `auth.NewAuthService(userRepo, refreshTokenRepo, mailer)`. When `mailer` is non-nil, `ForgotPassword` sends the token via email and does not return it in the response. When `mailer` is nil (default), the token is returned in the response for development and testing.
-- **Default:** The boilerplate wires `NewAuthService(userRepo, refreshTokenRepo, nil)`, so by default the token is returned in the response. To enable production-style behaviour, implement `EmailSender` and inject it when constructing the auth service in your routes.
+- **Wire-up:** Pass your implementation into `auth.NewAuthService(userRepo, refreshTokenRepo, mailer, auth.Config{...})` in `main.go`. The raw reset token is only ever sent through the mailer, never returned in the response. When `mailer` is nil, `ForgotPassword` returns `ErrMailerNotConfigured`.
+- **Default:** `auth.ResolveMailer()` picks the mailer: in development a log mailer that prints the token to the server log; outside development `MAIL_DRIVER` must be `smtp` or `log`, and startup fails otherwise.
 
 ---
 

@@ -5,26 +5,24 @@ services:
     container_name: gin_pg_db
     image: postgres:16-alpine
     ports:
-      - "5434:5432"
-    env_file:
-      - ../.env
+      - "127.0.0.1:5434:5432"
     environment:
       - POSTGRES_USER=${MASTER_DB_USER}
       - POSTGRES_PASSWORD=${MASTER_DB_PASSWORD}
       - POSTGRES_DB=${MASTER_DB_NAME}
     volumes:
       - gin_postgres_data:/var/lib/postgresql/data/
-    restart: always
+    restart: unless-stopped
 
   pgadmin:
     container_name: gin_pgadmin4_container
-    image: dpage/pgadmin4:latest
-    restart: always
+    image: dpage/pgadmin4:8.14
+    restart: unless-stopped
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
-      - PGADMIN_DEFAULT_PASSWORD=root
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:?set PGADMIN_EMAIL in .env}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in .env}
     logging:
       driver: none
     volumes:
@@ -41,7 +39,7 @@ services:
       - postgres_db
     volumes:
       - ..:/app
-    restart: always
+    restart: unless-stopped
     env_file:
       - ../.env
 
