@@ -10,7 +10,7 @@ import (
 
 const (
 	corsAllowMethods  = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-	corsAllowHeaders  = "Origin, Content-Type, Authorization, Accept, Accept-Encoding, X-CSRF-Token, Content-Length"
+	corsAllowHeaders  = "Origin, Content-Type, Authorization, Accept, Accept-Encoding, X-CSRF-Token, Content-Length, X-Request-ID"
 	corsExposeHeaders = "Content-Length, X-Request-ID"
 	corsMaxAge        = "86400"
 )
@@ -42,8 +42,8 @@ func CORSMiddlewareWithConfig(allowedOrigins []string) gin.HandlerFunc {
 		origin := ctx.GetHeader("Origin")
 		if _, ok := allowed[origin]; ok {
 			ctx.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			ctx.Writer.Header().Set("Vary", "Origin")
 		}
+		ctx.Writer.Header().Add("Vary", "Origin")
 
 		ctx.Writer.Header().Set("Access-Control-Allow-Methods", corsAllowMethods)
 		ctx.Writer.Header().Set("Access-Control-Allow-Headers", corsAllowHeaders)
