@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 
-	"github.com/bonarizki-dat/Datatables-Gin/datatables/dto"
+	"github.com/bonarizki/gin-datatables/v2/datatables/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/gin-gonic/gin"

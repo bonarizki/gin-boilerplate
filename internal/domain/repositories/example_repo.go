@@ -1,8 +1,8 @@
 package repositories
 
 import (
-	"github.com/bonarizki-dat/Datatables-Gin/datatables"
-	"github.com/bonarizki-dat/Datatables-Gin/datatables/dto"
+	"github.com/bonarizki/gin-datatables/v2/datatables"
+	"github.com/bonarizki/gin-datatables/v2/datatables/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 

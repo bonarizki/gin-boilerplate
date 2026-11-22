@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/bonarizki-dat/Datatables-Gin/datatables"
+	"github.com/bonarizki/gin-datatables/v2/datatables"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/utils"
