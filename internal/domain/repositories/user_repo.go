@@ -28,7 +28,7 @@ func NewUserRepository() UserRepository {
 }
 
 func (r *userRepo) CreateUser(user *models.User) error {
-	if err := database.DB.Create(user).Error; err != nil {
+	if err := database.WriteDB().Create(user).Error; err != nil {
 		logger.Errorf("failed to create user: %v", err)
 		return fmt.Errorf("failed to create user: %w", err)
 	}
@@ -37,7 +37,7 @@ func (r *userRepo) CreateUser(user *models.User) error {
 
 func (r *userRepo) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := database.DB.Where("email = ?", email).First(&user).Error
+	err := database.WriteDB().Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -49,7 +49,7 @@ func (r *userRepo) GetUserByEmail(email string) (*models.User, error) {
 }
 
 func (r *userRepo) UpdateUser(user *models.User) error {
-	if err := database.DB.Save(user).Error; err != nil {
+	if err := database.WriteDB().Save(user).Error; err != nil {
 		logger.Errorf("failed to update user: %v", err)
 		return fmt.Errorf("failed to update user: %w", err)
 	}
@@ -58,7 +58,7 @@ func (r *userRepo) UpdateUser(user *models.User) error {
 
 func (r *userRepo) GetUserByID(id uint) (*models.User, error) {
 	var user models.User
-	err := database.DB.First(&user, id).Error
+	err := database.WriteDB().First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -71,7 +71,7 @@ func (r *userRepo) GetUserByID(id uint) (*models.User, error) {
 
 func (r *userRepo) GetUserByPasswordResetToken(token string) (*models.User, error) {
 	var user models.User
-	err := database.DB.Where("password_reset_token = ?", token).First(&user).Error
+	err := database.WriteDB().Where("password_reset_token = ?", token).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil

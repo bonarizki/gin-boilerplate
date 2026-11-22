@@ -39,7 +39,7 @@ func NewRefreshTokenRepository() RefreshTokenRepository {
 }
 
 func (r *refreshTokenRepo) Create(token *models.RefreshToken) error {
-	if err := database.DB.Create(token).Error; err != nil {
+	if err := database.WriteDB().Create(token).Error; err != nil {
 		logger.Errorf("failed to create refresh token: %v", err)
 		return fmt.Errorf("failed to create refresh token: %w", err)
 	}
@@ -48,7 +48,7 @@ func (r *refreshTokenRepo) Create(token *models.RefreshToken) error {
 
 func (r *refreshTokenRepo) GetByTokenHash(hash string) (*models.RefreshToken, error) {
 	var token models.RefreshToken
-	err := database.DB.Where("token_hash = ?", hash).First(&token).Error
+	err := database.WriteDB().Where("token_hash = ?", hash).First(&token).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -61,7 +61,7 @@ func (r *refreshTokenRepo) GetByTokenHash(hash string) (*models.RefreshToken, er
 
 func (r *refreshTokenRepo) Rotate(oldID uint, newToken *models.RefreshToken) (bool, error) {
 	rotated := false
-	err := database.DB.Transaction(func(tx *gorm.DB) error {
+	err := database.WriteDB().Transaction(func(tx *gorm.DB) error {
 		now := time.Now()
 		result := tx.Model(&models.RefreshToken{}).
 			Where("id = ? AND revoked_at IS NULL", oldID).
@@ -94,7 +94,7 @@ func (r *refreshTokenRepo) MarkRotated(id uint, newTokenHash string) error {
 		"revoked_at":       time.Now(),
 		"replaced_by_hash": newTokenHash,
 	}
-	result := database.DB.Model(&models.RefreshToken{}).
+	result := database.WriteDB().Model(&models.RefreshToken{}).
 		Where("id = ? AND revoked_at IS NULL", id).
 		Updates(updates)
 	if result.Error != nil {
@@ -105,7 +105,7 @@ func (r *refreshTokenRepo) MarkRotated(id uint, newTokenHash string) error {
 }
 
 func (r *refreshTokenRepo) RevokeFamily(familyID string) error {
-	err := database.DB.Model(&models.RefreshToken{}).
+	err := database.WriteDB().Model(&models.RefreshToken{}).
 		Where("family_id = ? AND revoked_at IS NULL", familyID).
 		Update("revoked_at", time.Now()).Error
 	if err != nil {
@@ -116,7 +116,7 @@ func (r *refreshTokenRepo) RevokeFamily(familyID string) error {
 }
 
 func (r *refreshTokenRepo) RevokeAllForUser(userID uint) error {
-	err := database.DB.Model(&models.RefreshToken{}).
+	err := database.WriteDB().Model(&models.RefreshToken{}).
 		Where("user_id = ? AND revoked_at IS NULL", userID).
 		Update("revoked_at", time.Now()).Error
 	if err != nil {

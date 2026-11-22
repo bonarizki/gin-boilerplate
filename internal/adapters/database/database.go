@@ -68,3 +68,12 @@ func DbConnection(masterDSN, replicaDSN string) error {
 func GetDB() *gorm.DB {
 	return DB
 }
+
+// WriteDB forces queries onto the primary connection (bypasses read replicas).
+// Use for auth and other consistency-sensitive reads.
+func WriteDB() *gorm.DB {
+	if DB == nil {
+		return nil
+	}
+	return DB.Clauses(dbresolver.Write)
+}
