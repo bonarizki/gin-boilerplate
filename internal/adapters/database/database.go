@@ -1,8 +1,8 @@
 package database
 
 import (
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"

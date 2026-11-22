@@ -8,13 +8,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database/migrations"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database/seeders"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/routers"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/metrics"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database/migrations"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database/seeders"
+	"github.com/bonarizki/gin-boilerplate/internal/app/routers"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
 )
 
 func main() {

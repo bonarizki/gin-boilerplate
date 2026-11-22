@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services/auth"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/types"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/utils"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/types"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 

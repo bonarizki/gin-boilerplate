@@ -3,9 +3,9 @@ package seeders
 import (
 	"fmt"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 

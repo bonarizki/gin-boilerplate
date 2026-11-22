@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/utils"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )

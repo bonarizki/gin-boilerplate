@@ -1,4 +1,4 @@
-module github.com/bonarizki-dat/boilerplate-gin-dat
+module github.com/bonarizki/gin-boilerplate
 
 go 1.25.3
 

@@ -3,8 +3,8 @@ package mocks
 import (
 	"sync"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 )
 
 // MockUserRepository is an in-memory UserRepository for unit tests.

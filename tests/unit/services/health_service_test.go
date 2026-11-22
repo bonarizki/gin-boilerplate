@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/stretchr/testify/assert"
 )
 

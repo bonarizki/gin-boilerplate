@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/metrics"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
 )
 
 // HealthChecker is a dependency health check (e.g. database, cache, HTTP).

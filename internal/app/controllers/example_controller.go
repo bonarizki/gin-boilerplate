@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/bonarizki-dat/Datatables-Gin/datatables"
 	"github.com/bonarizki-dat/Datatables-Gin/datatables/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/utils"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 

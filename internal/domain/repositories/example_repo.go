@@ -1,9 +1,9 @@
 package repositories
 
-import(
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
+import (
 	"github.com/bonarizki-dat/Datatables-Gin/datatables"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,10 +15,10 @@ func GetDataDatatables(c *gin.Context) (interface{}, error) {
 		c,
 		query,
 		&example,
-		[]string{"id","data"},
+		[]string{"id", "data"},
 		map[string]string{ // orderable
-			"id":           "id",
-			"data":          "data",
+			"id":   "id",
+			"data": "data",
 		},
 		datatables.NewOptions().
 			WithIndex("DT_RowIndex", false), // global index
@@ -29,5 +29,5 @@ func GetDataDatatables(c *gin.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	return result,nil
+	return result, nil
 }

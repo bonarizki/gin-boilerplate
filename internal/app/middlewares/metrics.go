@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/metrics"
+	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
 	"github.com/gin-gonic/gin"
 )
 

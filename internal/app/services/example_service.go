@@ -3,8 +3,8 @@ package services
 import (
 	"context"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 

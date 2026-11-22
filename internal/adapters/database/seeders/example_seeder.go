@@ -3,9 +3,9 @@ package seeders
 import (
 	"fmt"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 )
 
 // demoExamples seed rows for the example CRUD/datatables endpoints.

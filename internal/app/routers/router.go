@@ -1,8 +1,8 @@
 package routers
 
 import (
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/middlewares"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/gin-gonic/gin"
 )
 

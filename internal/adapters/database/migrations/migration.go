@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	migratepostgres "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"

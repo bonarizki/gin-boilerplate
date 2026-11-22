@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services/auth"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
 )
 
 // MockAuthServicer is a test double for auth.AuthServicer.

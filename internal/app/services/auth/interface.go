@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
 )
 
 // AuthServicer is the interface used by AuthController and AuthMiddleware.

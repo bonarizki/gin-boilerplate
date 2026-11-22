@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/middlewares"
+	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

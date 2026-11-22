@@ -104,7 +104,7 @@ else
 fi
 
 # Current boilerplate info (to be replaced)
-OLD_MODULE_PATH="github.com/bonarizki-dat/boilerplate-gin-dat"
+OLD_MODULE_PATH="github.com/bonarizki/gin-boilerplate"
 OLD_PROJECT_NAME="go-gin-boilerplate"
 
 echo ""

@@ -1667,7 +1667,7 @@ c.JSON(404, gin.H{"message": "User created"})  // Should be 201
 
 ```go
 ✅ CORRECT - Use utility functions:
-import "github.com/bonarizki-dat/boilerplate-gin-dat/pkg/utils"
+import "github.com/bonarizki/gin-boilerplate/pkg/utils"
 
 // 200 OK
 func GetUser(c *gin.Context) {

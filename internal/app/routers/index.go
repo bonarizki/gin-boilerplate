@@ -1,12 +1,12 @@
 package routers
 
 import (
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/controllers"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/middlewares"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services/auth"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/utils"
+	"github.com/bonarizki/gin-boilerplate/internal/app/controllers"
+	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
 

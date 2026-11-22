@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/adapters/database"
+	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

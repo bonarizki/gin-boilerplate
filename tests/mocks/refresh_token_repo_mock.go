@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 )
 
 // MockRefreshTokenRepository is an in-memory RefreshTokenRepository for unit tests.

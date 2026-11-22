@@ -6,10 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/controllers"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/metrics"
+	"github.com/bonarizki/gin-boilerplate/internal/app/controllers"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

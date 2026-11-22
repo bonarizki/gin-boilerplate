@@ -9,11 +9,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )

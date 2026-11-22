@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 )
 
 // RefreshToken generates new access and refresh tokens using a valid refresh token.

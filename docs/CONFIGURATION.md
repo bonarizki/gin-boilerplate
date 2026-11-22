@@ -84,7 +84,7 @@ If `APP_ENV` is not set, it defaults to `development`.
 Use these helper functions in your code to conditionally execute logic:
 
 ```go
-import "github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
+import "github.com/bonarizki/gin-boilerplate/pkg/config"
 
 // Get current environment
 env := config.GetEnvironment()  // Returns: "development", "staging", or "production"
@@ -185,7 +185,7 @@ func InternalServerError(c *gin.Context, err error, message string) {
 Available constants for comparison:
 
 ```go
-import "github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
+import "github.com/bonarizki/gin-boilerplate/pkg/config"
 
 config.EnvDevelopment  // "development"
 config.EnvStaging      // "staging"
@@ -570,7 +570,7 @@ Use environment detection to conditionally enable/disable features and adjust be
 ### Basic Usage
 
 ```go
-import "github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
+import "github.com/bonarizki/gin-boilerplate/pkg/config"
 
 // Get current environment
 env := config.GetEnvironment()

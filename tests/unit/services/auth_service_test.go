@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/dto"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services/auth"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/models"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/tests/mocks"
+	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/tests/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

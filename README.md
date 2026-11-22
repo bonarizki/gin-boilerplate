@@ -558,8 +558,8 @@ package services_test
 
 import (
     "testing"
-    "github.com/bonarizki-dat/boilerplate-gin-dat/internal/app/services/auth"
-    "github.com/bonarizki-dat/boilerplate-gin-dat/internal/domain/repositories"
+    "github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
+    "github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 )
 
 func TestAuthService_ValidateToken(t *testing.T) {
@@ -836,7 +836,7 @@ SERVER_SHUTDOWN_TIMEOUT=10
 - **[golang-migrate](https://github.com/golang-migrate/migrate)** - Database migrations
 
 ### Custom Libraries
-- **[Datatables-Gin](https://github.com/bonarizki-dat/Datatables-Gin)** - DataTables integration
+- **[Datatables-Gin](https://github.com/bonarizki/gin-datatables)** - DataTables integration
 
 ---
 

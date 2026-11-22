@@ -3,8 +3,8 @@ package routers
 import (
 	"net/http"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/api"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/api"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/gin-gonic/gin"
 )
 

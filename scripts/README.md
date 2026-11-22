@@ -68,7 +68,7 @@ Target: /path/to/my-api/docs
 ✓ Detected project name: my-api
 
 Replacements:
-  Module: github.com/bonarizki-dat/boilerplate-gin-dat → github.com/myorg/my-api
+  Module: github.com/bonarizki/gin-boilerplate → github.com/myorg/my-api
   Name:   go-gin-boilerplate → my-api
 
 ▶ Copying documentation files...

@@ -3,8 +3,8 @@ package middlewares
 import (
 	"net/http"
 
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/config"
-	"github.com/bonarizki-dat/boilerplate-gin-dat/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/gin-gonic/gin"
 )
 
