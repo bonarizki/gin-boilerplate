@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
@@ -220,10 +221,14 @@ func ValidateConfig() error {
 		return fmt.Errorf("JWT_SECRET must be changed from example value and be at least 32 characters long. Generate with: openssl rand -base64 32")
 	}
 
-	// Validate port is numeric
 	port := viper.GetString("SERVER_PORT")
-	if port == "" {
-		return fmt.Errorf("SERVER_PORT cannot be empty")
+	portNum, err := strconv.Atoi(port)
+	if err != nil || portNum < 1 || portNum > 65535 {
+		return fmt.Errorf("SERVER_PORT must be an integer between 1 and 65535")
+	}
+
+	if err := validateReplicaConfig(); err != nil {
+		return err
 	}
 
 	// Validate CORS origins (required in production; must be well-formed everywhere)
@@ -296,4 +301,24 @@ func dbPoolInt(key string, def int) int {
 		return def
 	}
 	return v
+}
+
+func validateReplicaConfig() error {
+	replicaKeys := []string{
+		"REPLICA_DB_NAME", "REPLICA_DB_USER", "REPLICA_DB_PASSWORD",
+		"REPLICA_DB_HOST", "REPLICA_DB_PORT",
+	}
+	var setCount int
+	for _, key := range replicaKeys {
+		if viper.IsSet(key) && strings.TrimSpace(viper.GetString(key)) != "" {
+			setCount++
+		}
+	}
+	if setCount == 0 {
+		return nil
+	}
+	if setCount != len(replicaKeys) {
+		return fmt.Errorf("replica database requires all of: %s", strings.Join(replicaKeys, ", "))
+	}
+	return nil
 }
