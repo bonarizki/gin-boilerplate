@@ -182,7 +182,7 @@ Welcome to the project documentation. This guide helps you navigate all document
 **Last Updated:** 2026-02-03
 
 **Recent Changes:**
-- API versioning (`/api/v1`), global rate limit, single config source, request_id/LogStart/LogFinish logging, pluggable EmailSender (see "Recent changes" above).
+- API versioning (`/api/v1`), global rate limit, single config source, request_id logging via logger.FromContext, pluggable EmailSender (see "Recent changes" above).
 - `AI_AGENT_RULES.md` is kept (important for AI agents).
 - Added "New developer onboarding" path in this file.
 - `OPENTELEMETRY_TRACING_ANALYSIS.md` — optional OpenTelemetry analysis; request_id is sufficient for monolith.

@@ -64,8 +64,6 @@ func (d DatabaseChecker) Check(ctx context.Context) (string, error) {
 //
 // Returns "healthy" only if all checkers return "ok".
 func (s *HealthService) CheckHealth(ctx context.Context) *dto.HealthResponse {
-	ctx, start := logger.LogStart(ctx, "HealthService.CheckHealth")
-
 	checks := make(map[string]string)
 	for name, checker := range s.checkers {
 		status, _ := checker.Check(ctx)
@@ -80,7 +78,6 @@ func (s *HealthService) CheckHealth(ctx context.Context) *dto.HealthResponse {
 		}
 	}
 
-	logger.LogFinish(ctx, "HealthService.CheckHealth", nil, start)
 	return &dto.HealthResponse{
 		Status:    overallStatus,
 		Timestamp: time.Now(),
@@ -93,9 +90,6 @@ func (s *HealthService) CheckHealth(ctx context.Context) *dto.HealthResponse {
 //
 // Returns request counters and uptime statistics.
 func (s *HealthService) GetMetrics(ctx context.Context) *dto.MetricsResponse {
-	ctx, start := logger.LogStart(ctx, "HealthService.GetMetrics")
-
-	logger.LogFinish(ctx, "HealthService.GetMetrics", nil, start)
 	return &dto.MetricsResponse{
 		TotalRequests:   metrics.GetTotalRequests(),
 		SuccessRequests: metrics.GetSuccessRequests(),

@@ -67,27 +67,22 @@ func NewAuthService(userRepo repositories.UserRepository, refreshTokenRepo repos
 // Returns ErrEmailAlreadyExists if email is already registered.
 // Password is hashed using bcrypt before storage.
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (resp *dto.AuthResponse, err error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.Register")
-
 	req.Email = normalizeEmail(req.Email)
 
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
 		return nil, fmt.Errorf("failed to check email: %w", err)
 	}
 
 	if existingUser != nil {
-		logger.Warnf("registration attempt with existing email: %s", utils.MaskEmail(req.Email))
-		logger.LogFinish(ctx, "AuthService.Register", ErrEmailAlreadyExists, start)
+		logger.FromContext(ctx).Warnf("registration attempt with existing email: %s", utils.MaskEmail(req.Email))
 		return nil, ErrEmailAlreadyExists
 	}
 
 	// Hash password
 	hashedPassword, err := s.hashPassword(req.Password)
 	if err != nil {
-		logger.Errorf("failed to hash password: %v", err)
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
+		logger.FromContext(ctx).Errorf("failed to hash password: %v", err)
 		return nil, fmt.Errorf("failed to process password: %w", err)
 	}
 
@@ -100,15 +95,13 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 
 	// Save to database
 	if err = s.userRepo.CreateUser(ctx, user); err != nil {
-		logger.Errorf("failed to create user: %v", err)
-		logger.LogFinish(ctx, "AuthService.Register", err, start)
+		logger.FromContext(ctx).Errorf("failed to create user: %v", err)
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	logger.Infof("user registered successfully: %s", utils.MaskEmail(user.Email))
+	logger.FromContext(ctx).Infof("user registered successfully: %s", utils.MaskEmail(user.Email))
 
 	response, err := s.issueAuthResponse(ctx, user)
-	logger.LogFinish(ctx, "AuthService.Register", err, start)
 	return response, err
 }
 
@@ -116,34 +109,28 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 //
 // Returns ErrInvalidCredentials if email or password is incorrect.
 func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (resp *dto.AuthResponse, err error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.Login")
-
 	req.Email = normalizeEmail(req.Email)
 
 	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		logger.Errorf("failed to get user: %v", err)
-		logger.LogFinish(ctx, "AuthService.Login", err, start)
+		logger.FromContext(ctx).Errorf("failed to get user: %v", err)
 		return nil, fmt.Errorf("authentication failed: %w", err)
 	}
 
 	if user == nil {
-		logger.Warnf("login attempt with non-existent email: %s", utils.MaskEmail(req.Email))
-		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
+		logger.FromContext(ctx).Warnf("login attempt with non-existent email: %s", utils.MaskEmail(req.Email))
 		return nil, ErrInvalidCredentials
 	}
 
 	// Verify password
 	if err = s.verifyPassword(user.Password, req.Password); err != nil {
-		logger.Warnf("login attempt with invalid password: %s", utils.MaskEmail(req.Email))
-		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
+		logger.FromContext(ctx).Warnf("login attempt with invalid password: %s", utils.MaskEmail(req.Email))
 		return nil, ErrInvalidCredentials
 	}
 
-	logger.Infof("user logged in successfully: %s", utils.MaskEmail(user.Email))
+	logger.FromContext(ctx).Infof("user logged in successfully: %s", utils.MaskEmail(user.Email))
 
 	response, err := s.issueAuthResponse(ctx, user)
-	logger.LogFinish(ctx, "AuthService.Login", err, start)
 	return response, err
 }
 
@@ -153,18 +140,18 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (resp *d
 func (s *AuthService) issueAuthResponse(ctx context.Context, user *models.User) (*dto.AuthResponse, error) {
 	accessToken, err := s.generateToken(user)
 	if err != nil {
-		logger.Errorf("failed to generate access token: %v", err)
+		logger.FromContext(ctx).Errorf("failed to generate access token: %v", err)
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	familyID, err := s.newFamilyID()
 	if err != nil {
-		logger.Errorf("failed to generate token family id: %v", err)
+		logger.FromContext(ctx).Errorf("failed to generate token family id: %v", err)
 		return nil, fmt.Errorf("failed to generate token family id: %w", err)
 	}
 	refreshToken, err := s.issueRefreshToken(ctx, user.ID, familyID)
 	if err != nil {
-		logger.Errorf("failed to issue refresh token: %v", err)
+		logger.FromContext(ctx).Errorf("failed to issue refresh token: %v", err)
 		return nil, fmt.Errorf("failed to issue refresh token: %w", err)
 	}
 
@@ -223,20 +210,15 @@ func (s *AuthService) ValidateToken(tokenString string) (uint, error) {
 //
 // Returns ErrUserNotFound if userID doesn't exist (e.g. deleted after token was issued).
 func (s *AuthService) GetProfile(ctx context.Context, userID uint) (*dto.UserResponse, error) {
-	ctx, start := logger.LogStart(ctx, "AuthService.GetProfile")
-
 	user, err := s.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
-		logger.Errorf("failed to get user for profile: %v", err)
-		logger.LogFinish(ctx, "AuthService.GetProfile", err, start)
+		logger.FromContext(ctx).Errorf("failed to get user for profile: %v", err)
 		return nil, fmt.Errorf("failed to get profile: %w", err)
 	}
 	if user == nil {
-		logger.LogFinish(ctx, "AuthService.GetProfile", ErrUserNotFound, start)
 		return nil, ErrUserNotFound
 	}
 
-	logger.LogFinish(ctx, "AuthService.GetProfile", nil, start)
 	return &dto.UserResponse{ID: user.ID, Name: user.Name, Email: user.Email}, nil
 }
 

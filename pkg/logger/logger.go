@@ -152,21 +152,3 @@ func FromContext(ctx context.Context) *logrus.Entry {
 	}
 	return logger.WithFields(logrus.Fields{})
 }
-
-// LogStart logs START and returns ctx and start time. Use at handler/method entry; call LogFinish before every return.
-// In controllers pass c.Request.Context(); in services pass the ctx received from the controller.
-func LogStart(ctx context.Context, spanName string) (context.Context, time.Time) {
-	start := time.Now()
-	FromContext(ctx).Infof("START %s", spanName)
-	return ctx, start
-}
-
-// LogFinish logs FINISH with SUCCESS or FAIL and duration. Call before every return in handlers and service methods.
-func LogFinish(ctx context.Context, spanName string, err error, start time.Time) {
-	durMs := time.Since(start).Seconds() * 1000
-	status := "SUCCESS"
-	if err != nil {
-		status = "FAIL"
-	}
-	FromContext(ctx).Infof("FINISH %s (%s) duration=%.2fms", spanName, status, durMs)
-}
