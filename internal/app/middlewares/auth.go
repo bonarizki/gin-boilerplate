@@ -26,15 +26,14 @@ func AuthMiddleware(authService auth.AuthServicer) gin.HandlerFunc {
 		}
 
 		// Check Bearer token format
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		scheme, token, ok := strings.Cut(authHeader, " ")
+		token = strings.TrimSpace(token)
+		if !ok || !strings.EqualFold(scheme, "Bearer") || token == "" {
 			logger.Warnf("invalid authorization header format")
 			utils.Unauthorized(ctx, nil, "Invalid authorization header format")
 			ctx.Abort()
 			return
 		}
-
-		token := parts[1]
 
 		// Validate token
 		userID, err := authService.ValidateToken(token)

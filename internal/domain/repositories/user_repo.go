@@ -1,45 +1,54 @@
 package repositories
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"gorm.io/gorm"
+	"gorm.io/plugin/dbresolver"
 )
 
 // UserRepository defines data access for user entity (used by auth and others).
 type UserRepository interface {
-	GetUserByEmail(email string) (*models.User, error)
-	GetUserByID(id uint) (*models.User, error)
-	CreateUser(user *models.User) error
-	UpdateUser(user *models.User) error
-	GetUserByPasswordResetToken(token string) (*models.User, error)
-	ClearExpiredPasswordResets(cutoff time.Time) (int64, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByID(ctx context.Context, id uint) (*models.User, error)
+	CreateUser(ctx context.Context, user *models.User) error
+	UpdateUser(ctx context.Context, user *models.User) error
+	GetUserByPasswordResetToken(ctx context.Context, token string) (*models.User, error)
+	ClearExpiredPasswordResets(ctx context.Context, cutoff time.Time) (int64, error)
 }
 
 // userRepo is the default implementation of UserRepository.
-type userRepo struct{}
-
-// NewUserRepository returns a new UserRepository implementation.
-func NewUserRepository() UserRepository {
-	return &userRepo{}
+type userRepo struct {
+	db *gorm.DB
 }
 
-func (r *userRepo) CreateUser(user *models.User) error {
-	if err := database.WriteDB().Create(user).Error; err != nil {
+// NewUserRepository returns a UserRepository backed by db.
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepo{db: db}
+}
+
+// primary scopes a query to ctx and pins it to the primary, since auth reads
+// must see writes that just happened.
+func primary(ctx context.Context, db *gorm.DB) *gorm.DB {
+	return db.WithContext(ctx).Clauses(dbresolver.Write)
+}
+
+func (r *userRepo) CreateUser(ctx context.Context, user *models.User) error {
+	if err := primary(ctx, r.db).Create(user).Error; err != nil {
 		logger.Errorf("failed to create user: %v", err)
 		return fmt.Errorf("failed to create user: %w", err)
 	}
 	return nil
 }
 
-func (r *userRepo) GetUserByEmail(email string) (*models.User, error) {
+func (r *userRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	err := database.WriteDB().Where("email = ?", email).First(&user).Error
+	err := primary(ctx, r.db).Where("email = ?", email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -50,17 +59,17 @@ func (r *userRepo) GetUserByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *userRepo) UpdateUser(user *models.User) error {
-	if err := database.WriteDB().Save(user).Error; err != nil {
+func (r *userRepo) UpdateUser(ctx context.Context, user *models.User) error {
+	if err := primary(ctx, r.db).Save(user).Error; err != nil {
 		logger.Errorf("failed to update user: %v", err)
 		return fmt.Errorf("failed to update user: %w", err)
 	}
 	return nil
 }
 
-func (r *userRepo) GetUserByID(id uint) (*models.User, error) {
+func (r *userRepo) GetUserByID(ctx context.Context, id uint) (*models.User, error) {
 	var user models.User
-	err := database.WriteDB().First(&user, id).Error
+	err := primary(ctx, r.db).First(&user, id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -71,9 +80,9 @@ func (r *userRepo) GetUserByID(id uint) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *userRepo) GetUserByPasswordResetToken(token string) (*models.User, error) {
+func (r *userRepo) GetUserByPasswordResetToken(ctx context.Context, token string) (*models.User, error) {
 	var user models.User
-	err := database.WriteDB().Where("password_reset_token = ?", token).First(&user).Error
+	err := primary(ctx, r.db).Where("password_reset_token = ?", token).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -84,8 +93,8 @@ func (r *userRepo) GetUserByPasswordResetToken(token string) (*models.User, erro
 	return &user, nil
 }
 
-func (r *userRepo) ClearExpiredPasswordResets(cutoff time.Time) (int64, error) {
-	result := database.WriteDB().Model(&models.User{}).
+func (r *userRepo) ClearExpiredPasswordResets(ctx context.Context, cutoff time.Time) (int64, error) {
+	result := primary(ctx, r.db).Model(&models.User{}).
 		Where("password_reset_expiry IS NOT NULL AND password_reset_expiry < ?", cutoff).
 		Updates(map[string]interface{}{
 			"password_reset_token":  nil,

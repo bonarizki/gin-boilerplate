@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -18,6 +19,7 @@ type MockUserRepository struct {
 	byID map[uint]*models.User
 	// key: password reset token
 	byResetToken map[string]*models.User
+	nextID       uint
 }
 
 // NewMockUserRepository returns a new MockUserRepository.
@@ -58,7 +60,7 @@ func (m *MockUserRepository) SetUserByPasswordResetToken(token string, user *mod
 	m.byResetToken[token] = user
 }
 
-func (m *MockUserRepository) GetUserByEmail(email string) (*models.User, error) {
+func (m *MockUserRepository) GetUserByEmail(_ context.Context, email string) (*models.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if u, ok := m.byEmail[email]; ok {
@@ -68,7 +70,7 @@ func (m *MockUserRepository) GetUserByEmail(email string) (*models.User, error) 
 	return nil, nil
 }
 
-func (m *MockUserRepository) GetUserByID(id uint) (*models.User, error) {
+func (m *MockUserRepository) GetUserByID(_ context.Context, id uint) (*models.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if u, ok := m.byID[id]; ok {
@@ -78,7 +80,7 @@ func (m *MockUserRepository) GetUserByID(id uint) (*models.User, error) {
 	return nil, nil
 }
 
-func (m *MockUserRepository) CreateUser(user *models.User) error {
+func (m *MockUserRepository) CreateUser(_ context.Context, user *models.User) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.byEmail == nil {
@@ -87,13 +89,17 @@ func (m *MockUserRepository) CreateUser(user *models.User) error {
 	if m.byID == nil {
 		m.byID = make(map[uint]*models.User)
 	}
+	if user.ID == 0 {
+		m.nextID++
+		user.ID = m.nextID
+	}
 	u := *user
 	m.byEmail[user.Email] = &u
 	m.byID[u.ID] = &u
 	return nil
 }
 
-func (m *MockUserRepository) UpdateUser(user *models.User) error {
+func (m *MockUserRepository) UpdateUser(_ context.Context, user *models.User) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.byEmail != nil {
@@ -111,12 +117,12 @@ func (m *MockUserRepository) UpdateUser(user *models.User) error {
 	return nil
 }
 
-func (m *MockUserRepository) ClearExpiredPasswordResets(cutoff time.Time) (int64, error) {
+func (m *MockUserRepository) ClearExpiredPasswordResets(_ context.Context, cutoff time.Time) (int64, error) {
 	_ = cutoff
 	return 0, nil
 }
 
-func (m *MockUserRepository) GetUserByPasswordResetToken(token string) (*models.User, error) {
+func (m *MockUserRepository) GetUserByPasswordResetToken(_ context.Context, token string) (*models.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if u, ok := m.byResetToken[token]; ok {

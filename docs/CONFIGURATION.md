@@ -222,6 +222,8 @@ The following environment variables **MUST** be set. The application will not st
 |----------|-------------|---------|-------|
 | `APP_ENV` | Application environment | `development` | Values: `development`, `staging`, `production` |
 | `DEBUG` | Debug mode | Auto (true in dev) | Set to `True` only in development |
+| `JWT_ISSUER` | `iss` claim written into and required on access tokens | `gin-boilerplate` | Changing it invalidates outstanding access tokens. |
+| `JWT_AUDIENCE` | `aud` claim written into and required on access tokens | `gin-boilerplate-api` | Changing it invalidates outstanding access tokens. |
 | `LOG_LEVEL` | Minimum log level | `info` | `debug`, `info`, `warn`, `error`. Invalid values fail startup. |
 | `LOG_FORMAT` | Log line format | `json` in production, `text` otherwise | `json` or `text`. Logs go to stdout only; there is no `app.log` file. |
 | `MAX_BODY_BYTES` | Maximum request body size | `1048576` (1 MiB) | Larger bodies get `413 Request Entity Too Large`. |

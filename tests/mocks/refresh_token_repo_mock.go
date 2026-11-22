@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -38,7 +39,7 @@ func (m *MockRefreshTokenRepository) Seed(token *models.RefreshToken) {
 	m.byHash[token.TokenHash] = token
 }
 
-func (m *MockRefreshTokenRepository) Create(token *models.RefreshToken) error {
+func (m *MockRefreshTokenRepository) Create(_ context.Context, token *models.RefreshToken) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.byHash == nil {
@@ -51,7 +52,7 @@ func (m *MockRefreshTokenRepository) Create(token *models.RefreshToken) error {
 	return nil
 }
 
-func (m *MockRefreshTokenRepository) GetByTokenHash(hash string) (*models.RefreshToken, error) {
+func (m *MockRefreshTokenRepository) GetByTokenHash(_ context.Context, hash string) (*models.RefreshToken, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	if t, ok := m.byHash[hash]; ok {
@@ -61,7 +62,7 @@ func (m *MockRefreshTokenRepository) GetByTokenHash(hash string) (*models.Refres
 	return nil, nil
 }
 
-func (m *MockRefreshTokenRepository) Rotate(oldID uint, newToken *models.RefreshToken) (bool, error) {
+func (m *MockRefreshTokenRepository) Rotate(_ context.Context, oldID uint, newToken *models.RefreshToken) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	var old *models.RefreshToken
@@ -86,7 +87,7 @@ func (m *MockRefreshTokenRepository) Rotate(oldID uint, newToken *models.Refresh
 	return true, nil
 }
 
-func (m *MockRefreshTokenRepository) MarkRotated(id uint, newTokenHash string) error {
+func (m *MockRefreshTokenRepository) MarkRotated(_ context.Context, id uint, newTokenHash string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, t := range m.byHash {
@@ -100,7 +101,7 @@ func (m *MockRefreshTokenRepository) MarkRotated(id uint, newTokenHash string) e
 	return nil
 }
 
-func (m *MockRefreshTokenRepository) RevokeFamily(familyID string) error {
+func (m *MockRefreshTokenRepository) RevokeFamily(_ context.Context, familyID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now()
@@ -112,12 +113,12 @@ func (m *MockRefreshTokenRepository) RevokeFamily(familyID string) error {
 	return nil
 }
 
-func (m *MockRefreshTokenRepository) DeleteExpiredBefore(cutoff time.Time) (int64, error) {
+func (m *MockRefreshTokenRepository) DeleteExpiredBefore(_ context.Context, cutoff time.Time) (int64, error) {
 	_ = cutoff
 	return 0, nil
 }
 
-func (m *MockRefreshTokenRepository) RevokeAllForUser(userID uint) error {
+func (m *MockRefreshTokenRepository) RevokeAllForUser(_ context.Context, userID uint) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now()

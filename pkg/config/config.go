@@ -126,6 +126,8 @@ func SetupConfig() error {
 			Host:                   viper.GetString("SERVER_HOST"),
 			Port:                   viper.GetString("SERVER_PORT"),
 			JWTSecret:              viper.GetString("JWT_SECRET"),
+			JWTIssuer:              stringOr(viper.GetString("JWT_ISSUER"), "gin-boilerplate"),
+			JWTAudience:            stringOr(viper.GetString("JWT_AUDIENCE"), "gin-boilerplate-api"),
 			Debug:                  debug,
 			Timezone:               timezone,
 			RequestTimeoutSeconds:  requestTimeout,
@@ -324,4 +326,11 @@ func validateReplicaConfig() error {
 		return fmt.Errorf("replica database requires all of: %s", strings.Join(replicaKeys, ", "))
 	}
 	return nil
+}
+
+func stringOr(v, fallback string) string {
+	if v == "" {
+		return fallback
+	}
+	return v
 }

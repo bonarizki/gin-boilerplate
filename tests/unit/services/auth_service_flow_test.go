@@ -42,7 +42,6 @@ func TestRegisterRequestValidation(t *testing.T) {
 }
 
 func TestRegister(t *testing.T) {
-	setTestConfig(t)
 
 	t.Run("stores bcrypt hash and normalized email", func(t *testing.T) {
 		repo := mocks.NewMockUserRepository()
@@ -55,7 +54,7 @@ func TestRegister(t *testing.T) {
 		assert.NotEmpty(t, resp.AccessToken)
 		assert.Regexp(t, hex64, resp.RefreshToken)
 
-		stored, _ := repo.GetUserByEmail("ada@example.com")
+		stored, _ := repo.GetUserByEmail(context.Background(), "ada@example.com")
 		require.NotNil(t, stored, "user should be stored under the normalized email")
 		assert.NotEqual(t, "SecurePass123!", stored.Password)
 		assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(stored.Password), []byte("SecurePass123!")))
@@ -74,14 +73,13 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	setTestConfig(t)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte("SecurePass123!"), bcrypt.MinCost)
 	require.NoError(t, err)
 	repo := mocks.NewMockUserRepository()
 	repo.AddUserByEmail("ada@example.com", &models.User{ID: 7, Name: "Ada", Password: string(hash)})
 	tokens := mocks.NewMockRefreshTokenRepository()
-	svc := auth.NewAuthService(repo, tokens, auth.NewLogMailer())
+	svc := auth.NewAuthService(repo, tokens, auth.NewLogMailer(), testAuthConfig)
 
 	t.Run("unknown email", func(t *testing.T) {
 		_, err := svc.Login(context.Background(), &dto.LoginRequest{Email: "nobody@example.com", Password: "SecurePass123!"})
@@ -102,7 +100,7 @@ func TestLogin(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, uint(7), userID)
 
-		rec, err := tokens.GetByTokenHash(testHashToken(resp.RefreshToken))
+		rec, err := tokens.GetByTokenHash(context.Background(), testHashToken(resp.RefreshToken))
 		require.NoError(t, err)
 		require.NotNil(t, rec, "refresh token must be persisted by hash")
 		assert.Equal(t, uint(7), rec.UserID)
@@ -112,7 +110,6 @@ func TestLogin(t *testing.T) {
 // TestRefreshTokensAreUniqueHex checks tokens come from crypto/rand: 64
 // lowercase hex characters and no repeats across many sessions.
 func TestRefreshTokensAreUniqueHex(t *testing.T) {
-	setTestConfig(t)
 
 	hash, err := bcrypt.GenerateFromPassword([]byte("SecurePass123!"), bcrypt.MinCost)
 	require.NoError(t, err)
@@ -136,12 +133,12 @@ func TestForgotPasswordSetsFifteenMinuteExpiry(t *testing.T) {
 	repo := mocks.NewMockUserRepository()
 	repo.AddUserByEmail("ada@example.com", &models.User{ID: 1, Name: "Ada"})
 	mailer := &captureMailer{}
-	svc := auth.NewAuthService(repo, mocks.NewMockRefreshTokenRepository(), mailer)
+	svc := auth.NewAuthService(repo, mocks.NewMockRefreshTokenRepository(), mailer, testAuthConfig)
 
 	before := time.Now()
 	require.NoError(t, svc.ForgotPassword(context.Background(), &dto.ForgotPasswordRequest{Email: "ada@example.com"}))
 
-	user, _ := repo.GetUserByEmail("ada@example.com")
+	user, _ := repo.GetUserByEmail(context.Background(), "ada@example.com")
 	require.NotNil(t, user.PasswordResetExpiry)
 	assert.WithinDuration(t, before.Add(15*time.Minute), *user.PasswordResetExpiry, 5*time.Second)
 	assert.Regexp(t, hex64, mailer.token)

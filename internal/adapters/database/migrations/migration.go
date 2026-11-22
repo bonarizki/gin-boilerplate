@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	migratepostgres "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"gorm.io/gorm"
 )
 
 // Migrate applies all pending versioned SQL migrations using golang-migrate.
@@ -21,8 +21,8 @@ import (
 // Callers must treat a non-nil error as fatal: starting the server against a
 // database that failed to migrate risks serving requests against a schema
 // missing columns/tables the app code depends on.
-func Migrate() error {
-	sqlDB, err := database.DB.DB()
+func Migrate(db *gorm.DB) error {
+	sqlDB, err := db.DB()
 	if err != nil {
 		return fmt.Errorf("get underlying sql.DB: %w", err)
 	}

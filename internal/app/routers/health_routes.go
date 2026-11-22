@@ -14,9 +14,7 @@ import (
 // - Load balancer health probes
 // - Monitoring systems
 // - Observability metrics
-func RegisterHealthRoutes(router *gin.Engine) {
-	healthService := services.NewHealthService()
-	healthService.AddChecker("database", &services.DatabaseChecker{})
+func RegisterHealthRoutes(router *gin.Engine, healthService *services.HealthService) {
 	healthController := controllers.NewHealthController(healthService)
 
 	// Health check routes (no middleware needed)

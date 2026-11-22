@@ -10,6 +10,8 @@ type ServerConfiguration struct {
 	Host                   string
 	Port                   string
 	JWTSecret              string
+	JWTIssuer              string // written into and required on access tokens
+	JWTAudience            string // written into and required on access tokens
 	Debug                  bool
 	Timezone               string // IANA name, e.g. UTC, Asia/Jakarta
 	RequestTimeoutSeconds  int    // http.Server read/write timeout

@@ -2,11 +2,21 @@ package routers
 
 import (
 	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
 	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoute() *gin.Engine {
+// Deps are the services the HTTP layer needs; they are built once in main.
+type Deps struct {
+	Auth    auth.AuthServicer
+	Example *services.ExampleService
+	Health  *services.HealthService
+}
+
+// SetupRoute builds the gin engine with global middleware and all routes.
+func SetupRoute(deps Deps) *gin.Engine {
 	cfg := config.Get()
 	debug := cfg != nil && cfg.Server.Debug
 	var trustedProxies []string
@@ -29,7 +39,7 @@ func SetupRoute() *gin.Engine {
 	router.Use(middlewares.RequestLogMiddleware())
 	router.Use(middlewares.MetricsMiddleware())
 
-	RegisterRoutes(router) //routes register
+	RegisterRoutes(router, deps)
 
 	// Swagger UI and OpenAPI spec (only when Debug is true)
 	RegisterSwaggerRoutes(router, true)

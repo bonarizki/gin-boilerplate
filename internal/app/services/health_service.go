@@ -2,9 +2,9 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
-	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
@@ -40,17 +40,16 @@ func (s *HealthService) AddChecker(name string, c HealthChecker) {
 // DatabaseChecker implements HealthChecker for the application database.
 var _ HealthChecker = (*DatabaseChecker)(nil)
 
-type DatabaseChecker struct{}
+// DatabaseChecker pings DB; a nil DB reports "error".
+type DatabaseChecker struct {
+	DB *sql.DB
+}
 
-func (DatabaseChecker) Check(ctx context.Context) (string, error) {
-	if database.DB == nil {
+func (d DatabaseChecker) Check(ctx context.Context) (string, error) {
+	sqlDB := d.DB
+	if sqlDB == nil {
 		logger.Warnf("health check: database not initialized")
 		return "error", nil
-	}
-	sqlDB, err := database.DB.DB()
-	if err != nil {
-		logger.Errorf("health check: failed to get database instance: %v", err)
-		return "error", err
 	}
 	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
