@@ -21,12 +21,11 @@ func SetupRoute() *gin.Engine {
 
 	router := gin.New()
 	router.SetTrustedProxies(trustedProxies)
-	router.Use(gin.Logger())
-	router.Use(gin.Recovery())
-	router.Use(middlewares.BodyLimitMiddleware())
+	router.Use(middlewares.RequestIDMiddleware())
+	router.Use(middlewares.RecoveryMiddleware())
 	router.Use(middlewares.SecurityHeadersMiddleware())
 	router.Use(middlewares.CORSMiddleware())
-	router.Use(middlewares.RequestIDMiddleware())
+	router.Use(middlewares.BodyLimitMiddleware())
 	router.Use(middlewares.RequestLogMiddleware())
 	router.Use(middlewares.MetricsMiddleware())
 
