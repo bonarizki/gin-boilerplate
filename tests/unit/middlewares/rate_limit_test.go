@@ -84,23 +84,29 @@ func TestRateLimitMiddleware(t *testing.T) {
 	})
 }
 
-// TestIPRateLimiter tests that different IPs have separate limits.
-// Skipped: integration-style test (requires simulating different client IPs; run in API/integration tests).
+// TestIPRateLimiter verifies each client IP gets its own bucket: one IP
+// exhausting its burst does not block another.
 func TestIPRateLimiter(t *testing.T) {
-	t.Skip("Skipping: Requires IP simulation which is complex in unit tests")
-
-	// NOTE: This test demonstrates the pattern but is skipped
-	// In production, test this with integration tests or manually
 	router := setupTestRouter()
-	router.Use(middlewares.RateLimitMiddlewareWithConfig(2, 2))
+	router.Use(middlewares.RateLimitMiddlewareWithConfig(1, 2))
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	})
 
-	// Different IPs should have separate rate limits
-	// IP 1: 192.168.1.1
-	// IP 2: 192.168.1.2
-	// Each should be able to make 2 requests independently
+	do := func(ip string) int {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.RemoteAddr = ip + ":12345"
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w.Code
+	}
+
+	assert.Equal(t, http.StatusOK, do("192.168.1.1"))
+	assert.Equal(t, http.StatusOK, do("192.168.1.1"))
+	assert.Equal(t, http.StatusTooManyRequests, do("192.168.1.1"), "third request from the same IP exceeds burst 2")
+
+	assert.Equal(t, http.StatusOK, do("192.168.1.2"), "a different IP has its own bucket")
+	assert.Equal(t, http.StatusOK, do("192.168.1.2"))
 }
 
 // BenchmarkRateLimitMiddleware benchmarks the rate limit middleware
