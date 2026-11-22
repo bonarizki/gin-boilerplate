@@ -23,6 +23,8 @@ func SetupRoute() *gin.Engine {
 	router.SetTrustedProxies(trustedProxies)
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(middlewares.BodyLimitMiddleware())
+	router.Use(middlewares.SecurityHeadersMiddleware())
 	router.Use(middlewares.CORSMiddleware())
 	router.Use(middlewares.RequestIDMiddleware())
 	router.Use(middlewares.RequestLogMiddleware())
