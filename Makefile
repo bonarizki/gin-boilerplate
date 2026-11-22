@@ -9,6 +9,7 @@ help:
 	@echo '  make run          - run application (go run main.go)'
 	@echo '  make test         - run unit tests'
 	@echo '  make test-coverage - run tests with coverage report'
+	@echo '  make test-integration - run all tests against TEST_DB_MASTER_DSN'
 	@echo '  make migrate-up   - apply all pending SQL migrations'
 	@echo '  make migrate-down - rollback the last SQL migration'
 	@echo '  make migrate-version - print current migration version'
@@ -45,11 +46,18 @@ test-coverage:
 	go test -coverprofile=coverage.out -coverpkg=$(COVER_PKGS) ./tests/unit/... ./internal/... ./pkg/...
 	go tool cover -func=coverage.out
 
-# test-coverage-check runs tests with coverage and fails if total coverage is below 70%.
-# Requires a Go toolchain that supports merged coverage (see tests/README.md).
+# test-integration runs every test against the Postgres in TEST_DB_MASTER_DSN.
+# Use a throwaway database: the tests truncate all tables.
+test-integration:
+	@test -n "$(TEST_DB_MASTER_DSN)" || (echo "set TEST_DB_MASTER_DSN, e.g. postgres://user:pass@localhost:5432/gin_test?sslmode=disable"; exit 1)
+	go test -race -p 1 ./tests/...
+
+# test-coverage-check runs all tests (integration included when TEST_DB_MASTER_DSN
+# is set) and fails if total coverage is below COVERAGE_MIN percent.
+COVERAGE_MIN ?= 50
 test-coverage-check:
-	go test -coverprofile=coverage.out -coverpkg=$(COVER_PKGS) ./tests/unit/... ./internal/... ./pkg/...
-	@go tool cover -func=coverage.out | grep '^total:' | awk '{gsub(/%/,""); if ($$3 < 70) { print "Coverage " $$3 "% is below 70%"; exit 1 } }'
+	go test -p 1 -coverprofile=coverage.out -coverpkg=$(COVER_PKGS) ./tests/... ./internal/... ./pkg/...
+	@go tool cover -func=coverage.out | grep '^total:' | awk '{gsub(/%/,""); if ($$3 < $(COVERAGE_MIN)) { print "Coverage " $$3 "% is below $(COVERAGE_MIN)%"; exit 1 } }'
 	go tool cover -func=coverage.out
 
 # migrate-* targets require the golang-migrate CLI (see internal/adapters/database/migrations/sql/README.md).

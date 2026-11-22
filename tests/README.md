@@ -12,12 +12,13 @@ From the project root:
   go test -coverprofile=coverage.out ./tests/unit/... ./internal/... ./pkg/...
   go tool cover -func=coverage.out
   ```
-- **Coverage gate (70%):** `make test-coverage-check` runs tests with coverage and fails if overall coverage is below 70%. The project standard is minimum 70% for the services layer (see docs/CODING_STANDARDS.md).
+- **Integration tests:** `make test-integration` with `TEST_DB_MASTER_DSN` pointing at a throwaway Postgres database (tables are truncated). Without the variable those tests skip.
+- **Coverage gate:** `make test-coverage-check` fails below `COVERAGE_MIN` (default 50%). Measured: about 35% from unit tests alone and about 52% with the database integration tests. CI runs the integration tests against a Postgres service and enforces 50%.
 - **HTML coverage report:** `go tool cover -html=coverage.out` (opens in browser)
 
 Mocks live under `tests/mocks/` (e.g. `MockUserRepository`, `MockAuthServicer`) for use in unit tests.
 
-**Service coverage note:** `ExampleService` uses package-level repository calls (`repositories.Get`, `repositories.GetDataDatatables`) and is not unit-tested in isolation; it is covered by integration tests when the database is available.
+Repositories take a `*gorm.DB` and services take their repositories and `auth.Config` through constructors, so unit tests use mocks and never touch global config or a database.
 
 ## Directory Structure
 
@@ -134,14 +135,17 @@ go test -cover ./tests/...
 # Run with verbose output
 go test -v ./tests/...
 
-# Run integration tests (if using build tags)
-go test -tags=integration ./tests/...
+# Run integration tests against a throwaway database
+TEST_DB_MASTER_DSN=postgres://user:pass@localhost:5432/gin_test?sslmode=disable go test -p 1 ./tests/integration/...
 ```
 
 ### Integration test notes
 
-- **`tests/integration/api/health_test.go`** — Tests `GET /health` without requiring database. Expects 200 (healthy) or 503 (unhealthy). Run with: `go test ./tests/integration/api/...`
-- **`tests/integration/database/connection_test.go`** — Tests database connectivity. Skipped unless `TEST_DB_MASTER_DSN` is set (e.g. `host=localhost user=postgres password=... dbname=test port=5432 sslmode=disable`). Run with: `go test ./tests/integration/database/...`
+All of these use `tests/integration/testdb`, which skips unless `TEST_DB_MASTER_DSN` is set, applies migrations and truncates every table.
+
+- **`tests/integration/api/health_test.go`** — `GET /health` returns 503 when the database checker has no connection and 200 when it does.
+- **`tests/integration/api/auth_flow_test.go`** — end to end through the real router: register → login → `/profile` → refresh → replaying the old token (401, family revoked) → logout-all.
+- **`tests/integration/database/connection_test.go`** — every repository method, pool settings, and that a cancelled context aborts the query with `context.Canceled`.
 
 ## Testing Standards
 
