@@ -116,22 +116,9 @@ if config.IsDebugEnabled() {
 
 **Example 1: Enable SQL Logging Only in Development**
 ```go
-// internal/adapters/database/database.go
-func DbConnection(masterDSN, replicaDSN string) error {
-    logMode := config.IsDevelopment() // true in dev, false in prod
-
-    masterDB, err := gorm.Open(postgres.Open(masterDSN), &gorm.Config{
-        Logger: logger.Default.LogMode(logger.Info),
-        // Only log SQL in development
-        DisableForeignKeyConstraintWhenMigrating: config.IsDevelopment(),
-    })
-
-    if config.IsDevelopment() {
-        masterDB = masterDB.Debug() // Enable SQL logging
-    }
-
-    return nil
-}
+// main.go: SQL logging follows MASTER_DB_LOG_MODE; the read replica is
+// skipped in debug mode.
+db, err := database.Connect(masterDSN, replicaDSN, cfg.Database, !cfg.Server.Debug)
 ```
 
 **Example 2: Seed Test Data Only in Development**
@@ -535,7 +522,7 @@ JWT_SECRET=<paste-generated-secret-here>
 
 ### Database Connection Failed
 
-**Error:** `database DbConnection error: connection refused`
+**Error:** `connect database: ... connection refused`
 
 **Possible Causes:**
 1. Wrong `MASTER_DB_HOST` or `MASTER_DB_PORT`
@@ -594,25 +581,17 @@ if config.IsProduction() {
 **1. Conditional Database Logging**
 
 ```go
-// internal/adapters/database/database.go
-func DbConnection(masterDSN, replicaDSN string) error {
-    if config.IsDevelopment() {
-        masterDB = masterDB.Debug() // Enable SQL logging only in dev
-    }
-    return nil
-}
+// Set MASTER_DB_LOG_MODE=true in development .env only;
+// database.Connect switches GORM to Info-level SQL logging when it is set.
 ```
 
 **2. Environment-Specific Seeding**
 
 ```go
-// migrations/migrate.go
-func Migrate() {
-    database.MasterDB.AutoMigrate(&models.User{})
-
-    if config.IsDevelopment() {
-        seedTestData() // Only seed in development
-    }
+// main.go
+if err := migrations.Migrate(db); err != nil { ... }
+if config.IsDevelopment() && config.GetBool("SEED_DEMO_DATA") {
+    if err := seeders.Run(ctx, db); err != nil { ... }
 }
 ```
 

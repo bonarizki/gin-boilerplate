@@ -6,6 +6,8 @@
 
 ---
 
+> **Note on repository examples:** many snippets below use the old global `database.DB`. The code now injects the connection: repositories are built with `NewXRepository(db *gorm.DB)`, every method takes `ctx context.Context` first, and queries start from `r.db.WithContext(ctx)`. See `internal/domain/repositories/user_repo.go` for the current pattern.
+
 ## ⚠️ FOR AI AGENTS - READ THIS FIRST
 
 > **🚨 CRITICAL: Read [`00_AI_CRITICAL_RULES.md`](./00_AI_CRITICAL_RULES.md) BEFORE reading this document!**

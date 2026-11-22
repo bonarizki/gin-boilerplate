@@ -151,7 +151,7 @@ spec:
 
 - **`CheckHealth(ctx context.Context)`** returns overall `"healthy"` only if every registered checker returns `"ok"`.
 - **`AddChecker(name string, c HealthChecker)`** registers a dependency checker. The **HealthChecker** interface has a single method: `Check(ctx context.Context) (string, error)` returning `"ok"` or `"error"`.
-- The database is registered as a checker (e.g. `HealthService.AddChecker("database", &services.DatabaseChecker{})`) at startup. No direct `checkDatabase()` method; all checks go through the interface.
+- The database is registered as a checker (e.g. `healthService.AddChecker("database", services.DatabaseChecker{DB: sqlDB})` in `main.go`) at startup. No direct `checkDatabase()` method; all checks go through the interface.
 
 See [internal/app/services/health_service.go](../internal/app/services/health_service.go) for the full implementation.
 

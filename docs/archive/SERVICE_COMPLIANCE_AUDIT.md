@@ -1,3 +1,5 @@
+> **Archived, point-in-time document.** Written before the dependency-injection and context refactor; code references may be out of date. Kept for history only.
+
 # Service Compliance Audit Against .docs Standards
 
 **Audit date:** 2026-02-03  

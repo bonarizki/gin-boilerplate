@@ -1772,7 +1772,7 @@ When an endpoint **must** follow an external format (e.g. DataTables server-side
 
 #### Service accepting gin.Context exception (DataTables)
 
-General rule: services **MUST NOT** accept or use `gin.Context`. Exception: when a third-party library integration (e.g. Datatables-Gin) **requires** `*gin.Context` for binding query params (draw, start, length, search, order), the service method that calls that library may accept `(ctx context.Context, c *gin.Context)` to avoid duplicating the entire library API into DTOs. Example: `ExampleService.GetDataDatatables(ctx, c)` and `repositories.GetDataDatatables(c)` — this exception is documented in [SERVICE_COMPLIANCE_AUDIT.md](SERVICE_COMPLIANCE_AUDIT.md). Other services must not use `gin.Context`.
+General rule: services **MUST NOT** accept or use `gin.Context`. Exception: when a third-party library integration (e.g. Datatables-Gin) **requires** `*gin.Context` for binding query params (draw, start, length, search, order), the service method that calls that library may accept `(ctx context.Context, c *gin.Context)` to avoid duplicating the entire library API into DTOs. Example: `ExampleService.GetDataDatatables(ctx, c)` and `ExampleRepository.Datatables(c)`, which runs its query with `c.Request.Context()`. Other services must not use `gin.Context`.
 
 #### Standard Response Format
 

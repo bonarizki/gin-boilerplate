@@ -184,13 +184,12 @@ If you're an AI agent or using AI-assisted development:
 | [docs/00_AI_CRITICAL_RULES.md](docs/00_AI_CRITICAL_RULES.md) | Critical rules summary (Tier 0–2) |
 | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Comprehensive coding standards |
 | [docs/DESIGN_PATTERNS.md](docs/DESIGN_PATTERNS.md) | Architecture and design patterns |
-| [docs/CONTROLLER_COMPLIANCE_AUDIT.md](docs/CONTROLLER_COMPLIANCE_AUDIT.md) | Controller/router compliance checklist |
+| [docs/archive/CONTROLLER_COMPLIANCE_AUDIT.md](docs/archive/CONTROLLER_COMPLIANCE_AUDIT.md) | Controller/router compliance checklist |
 | [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | Health checks, metrics, request-ID correlation |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Environment management & validation |
 | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | Auth flows and JWT usage |
 | [docs/CONTRACTS.md](docs/CONTRACTS.md) | Stable contracts (response shape, auth, env) — avoid breaking changes |
 | [tests/README.md](tests/README.md) | Test organization and structure |
-| [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) | High-level project analysis and metrics |
 
 **Quick Links:**
 - 🏗️ [Architecture Overview](#-architecture)
@@ -198,7 +197,7 @@ If you're an AI agent or using AI-assisted development:
 - 📊 [Observability Guide](docs/OBSERVABILITY.md) - Health checks, metrics, request-ID correlation
 - ⚙️ [Configuration Guide](docs/CONFIGURATION.md) - Environment management
 - 🧪 [Test Structure](tests/README.md)
-- 📋 [Controller Compliance](docs/CONTROLLER_COMPLIANCE_AUDIT.md) - Standards checklist
+- 📋 [Controller Compliance](docs/archive/CONTROLLER_COMPLIANCE_AUDIT.md) - Standards checklist
 - 📜 [Stable contracts](docs/CONTRACTS.md) - Response shape, auth, env; versioning policy
 - 🗄️ [Database Migrations](internal/adapters/database/migrations/sql/README.md)
 - 🐳 [Docker Setup](#-docker-development)
@@ -530,7 +529,9 @@ go test -race ./tests/...
 go test -v ./tests/...
 ```
 
-**Coverage goals** (aspirational contribution targets, not a measured badge of the current tree):
+**Measured coverage** (statements in `internal/` and `pkg/`): about 35% from unit tests alone, about 52% with the Postgres integration tests (`make test-integration`). CI enforces a 50% floor.
+
+**Coverage goals** (targets for new code, not the current state):
 - Services: 70% minimum (85% target)
 - Repositories: 70% minimum
 - Controllers: 60% minimum
@@ -558,12 +559,16 @@ package services_test
 import (
     "testing"
     "github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
-    "github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+    "github.com/bonarizki/gin-boilerplate/tests/mocks"
 )
 
 func TestAuthService_ValidateToken(t *testing.T) {
-    userRepo := repositories.NewUserRepository()
-    authService := auth.NewAuthService(userRepo, nil)
+    authService := auth.NewAuthService(
+        mocks.NewMockUserRepository(),
+        mocks.NewMockRefreshTokenRepository(),
+        nil, // mailer
+        auth.Config{JWTSecret: "test-secret-at-least-32-characters-long"},
+    )
 
     tests := []struct {
         name    string
@@ -708,24 +713,11 @@ make clean
 
 ## 🗄️ Database Migrations
 
-### Development Approach
+The app applies the embedded SQL files in `internal/adapters/database/migrations/sql` with golang-migrate on every startup (`migrations.Migrate(db)`) and refuses to start if a migration fails. GORM `AutoMigrate` is not used; schema changes are always new SQL files.
 
-Uses GORM AutoMigrate for quick iteration:
+### Manual operations
 
-```go
-// internal/adapters/database/migrations/migration.go
-func Migrate() {
-    models := []interface{}{
-        &models.User{},
-        // Add your models here
-    }
-    database.DB.AutoMigrate(models...)
-}
-```
-
-### Production Approach
-
-Uses SQL migration files with `golang-migrate`:
+For rollbacks and new migrations, use the `migrate` CLI (or the `make migrate-*` targets):
 
 ```bash
 # Install golang-migrate
@@ -860,7 +852,7 @@ SERVER_SHUTDOWN_TIMEOUT=10
 - ✅ All tests MUST be in `tests/` directory (NOT co-located)
 - ✅ File size MAX 300 lines
 - ✅ Function size MAX 100 lines
-- ✅ Test coverage MIN 70% for services
+- ✅ New service code should come with tests (target 70% for services)
 
 See [docs/00_AI_CRITICAL_RULES.md](docs/00_AI_CRITICAL_RULES.md) for complete rules.
 
@@ -879,7 +871,7 @@ We welcome contributions! Please follow our standards:
 1. Fork the repository
 2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow coding standards (struct-based, response utilities, etc.)
-4. Write tests (minimum 70% coverage)
+4. Write tests for new behaviour (unit tests with mocks; integration tests for repositories)
 5. Commit with clear messages
 6. Push to branch
 7. Open Pull Request
@@ -914,7 +906,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Observability Guide](docs/OBSERVABILITY.md)
 - [Configuration Guide](docs/CONFIGURATION.md)
 - [Test Structure](tests/README.md)
-- [Controller Compliance Audit](docs/CONTROLLER_COMPLIANCE_AUDIT.md)
+- [Controller Compliance Audit](docs/archive/CONTROLLER_COMPLIANCE_AUDIT.md)
 
 ---
 
