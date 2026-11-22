@@ -90,6 +90,25 @@ func TestRequestIDMiddleware(t *testing.T) {
 		assert.Equal(t, w.Header().Get("X-Request-ID"), handlerAccessedID, "Handler and header should have same ID")
 	})
 
+	t.Run("Rejects invalid request ID from header", func(t *testing.T) {
+		router := setupTestRouter()
+		router.Use(middlewares.RequestIDMiddleware())
+
+		var capturedRequestID string
+		router.GET("/test", func(c *gin.Context) {
+			capturedRequestID = c.GetString("request_id")
+			c.JSON(http.StatusOK, gin.H{"message": "ok"})
+		})
+
+		req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+		req.Header.Set("X-Request-ID", "bad\nid-with-newline")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.NotEqual(t, "bad\nid-with-newline", capturedRequestID)
+		assert.Len(t, capturedRequestID, 36)
+	})
+
 	t.Run("Different requests get different IDs", func(t *testing.T) {
 		router := setupTestRouter()
 		router.Use(middlewares.RequestIDMiddleware())
