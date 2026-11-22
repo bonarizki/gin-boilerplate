@@ -2,6 +2,7 @@ package routers
 
 import (
 	"github.com/bonarizki/gin-boilerplate/internal/app/controllers"
+	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/gin-gonic/gin"
 )
@@ -20,5 +21,5 @@ func RegisterHealthRoutes(router *gin.Engine) {
 
 	// Health check routes (no middleware needed)
 	router.GET("/health", healthController.Health)
-	router.GET("/metrics", healthController.Metrics)
+	router.GET("/metrics", middlewares.MetricsAuthMiddleware(), healthController.Metrics)
 }
