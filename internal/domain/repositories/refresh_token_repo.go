@@ -29,6 +29,8 @@ type RefreshTokenRepository interface {
 	RevokeFamily(familyID string) error
 	// RevokeAllForUser revokes every still-active token for userID (logout-all-devices).
 	RevokeAllForUser(userID uint) error
+	// DeleteExpiredBefore removes refresh tokens expired or long-revoked before cutoff.
+	DeleteExpiredBefore(cutoff time.Time) (int64, error)
 }
 
 type refreshTokenRepo struct{}
@@ -124,4 +126,15 @@ func (r *refreshTokenRepo) RevokeAllForUser(userID uint) error {
 		return fmt.Errorf("failed to revoke all refresh tokens for user: %w", err)
 	}
 	return nil
+}
+
+func (r *refreshTokenRepo) DeleteExpiredBefore(cutoff time.Time) (int64, error) {
+	result := database.WriteDB().
+		Where("expires_at < ? OR (revoked_at IS NOT NULL AND revoked_at < ?)", cutoff, cutoff).
+		Delete(&models.RefreshToken{})
+	if result.Error != nil {
+		logger.Errorf("failed to delete expired refresh tokens: %v", result.Error)
+		return 0, fmt.Errorf("failed to delete expired refresh tokens: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }

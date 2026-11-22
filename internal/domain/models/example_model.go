@@ -1,14 +1,13 @@
 package models
 
-import (
-	"time"
-)
+import "time"
 
+// Example is a sample domain row used by the DataTables demo endpoint.
 type Example struct {
-	Id        int        `json:"id" gorm:"primaryKey"`
-	Data      string     `json:"data" binding:"required"`
-	CreatedAt *time.Time `json:"created_at"`
-	UpdatedAt *time.Time `json:"updated_at_at"`
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Data      string    `json:"data"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // TableName is Database TableName of this model

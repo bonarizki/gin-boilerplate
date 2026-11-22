@@ -2,6 +2,7 @@ package mocks
 
 import (
 	"sync"
+	"time"
 
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
@@ -108,6 +109,11 @@ func (m *MockUserRepository) UpdateUser(user *models.User) error {
 		m.byResetToken[user.PasswordResetToken] = user
 	}
 	return nil
+}
+
+func (m *MockUserRepository) ClearExpiredPasswordResets(cutoff time.Time) (int64, error) {
+	_ = cutoff
+	return 0, nil
 }
 
 func (m *MockUserRepository) GetUserByPasswordResetToken(token string) (*models.User, error) {

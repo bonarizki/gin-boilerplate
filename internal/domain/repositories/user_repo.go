@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
@@ -17,6 +18,7 @@ type UserRepository interface {
 	CreateUser(user *models.User) error
 	UpdateUser(user *models.User) error
 	GetUserByPasswordResetToken(token string) (*models.User, error)
+	ClearExpiredPasswordResets(cutoff time.Time) (int64, error)
 }
 
 // userRepo is the default implementation of UserRepository.
@@ -80,4 +82,18 @@ func (r *userRepo) GetUserByPasswordResetToken(token string) (*models.User, erro
 		return nil, fmt.Errorf("failed to get user by password reset token: %w", err)
 	}
 	return &user, nil
+}
+
+func (r *userRepo) ClearExpiredPasswordResets(cutoff time.Time) (int64, error) {
+	result := database.WriteDB().Model(&models.User{}).
+		Where("password_reset_expiry IS NOT NULL AND password_reset_expiry < ?", cutoff).
+		Updates(map[string]interface{}{
+			"password_reset_token":  nil,
+			"password_reset_expiry": nil,
+		})
+	if result.Error != nil {
+		logger.Errorf("failed to clear expired password reset tokens: %v", result.Error)
+		return 0, fmt.Errorf("failed to clear expired password reset tokens: %w", result.Error)
+	}
+	return result.RowsAffected, nil
 }

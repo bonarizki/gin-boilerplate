@@ -112,6 +112,11 @@ func (m *MockRefreshTokenRepository) RevokeFamily(familyID string) error {
 	return nil
 }
 
+func (m *MockRefreshTokenRepository) DeleteExpiredBefore(cutoff time.Time) (int64, error) {
+	_ = cutoff
+	return 0, nil
+}
+
 func (m *MockRefreshTokenRepository) RevokeAllForUser(userID uint) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -8,10 +8,14 @@ import (
 	"syscall"
 	"time"
 
+	_ "time/tzdata"
+
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database/migrations"
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database/seeders"
 	"github.com/bonarizki/gin-boilerplate/internal/app/routers"
+	"github.com/bonarizki/gin-boilerplate/internal/app/services"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/metrics"
@@ -26,11 +30,9 @@ func main() {
 	if cfg == nil {
 		logger.Fatalf("config not loaded")
 	}
-	loc, err := time.LoadLocation(cfg.Server.Timezone)
-	if err != nil {
+	if _, err := time.LoadLocation(cfg.Server.Timezone); err != nil {
 		logger.Fatalf("invalid SERVER_TIMEZONE %q: %v", cfg.Server.Timezone, err)
 	}
-	time.Local = loc
 
 	// Initialize metrics tracking
 	metrics.Init()
@@ -50,6 +52,10 @@ func main() {
 			logger.Fatalf("database seeding failed: %v", err)
 		}
 	}
+
+	userRepo := repositories.NewUserRepository()
+	refreshTokenRepo := repositories.NewRefreshTokenRepository()
+	services.StartTokenCleanup(userRepo, refreshTokenRepo)
 
 	router := routers.SetupRoute()
 
