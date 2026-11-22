@@ -45,7 +45,7 @@ func main() {
 		logger.Fatalf("database migration failed: %v", err)
 	}
 
-	if config.IsDevelopment() {
+	if config.IsDevelopment() && config.GetBool("SEED_DEMO_DATA") {
 		if err := seeders.Run(); err != nil {
 			logger.Fatalf("database seeding failed: %v", err)
 		}
