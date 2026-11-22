@@ -133,7 +133,7 @@ cd /path/to/boilerplate
 #### Use Case 3: Internal Template
 
 ```bash
-# Create company template
+# Create a reusable team template
 ./scripts/port-docs.sh /company/templates/go-gin-template
 
 # All devs can use this template

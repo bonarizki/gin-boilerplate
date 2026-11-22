@@ -55,7 +55,7 @@ Welcome to the project documentation. This guide helps you navigate all document
 | **CODING_STANDARDS.md** | Comprehensive coding standards, naming conventions, best practices |
 | **DESIGN_PATTERNS.md** | Architecture patterns, layer responsibilities, implementation guides |
 | **CONFIGURATION.md** | Environment configuration, validation, secrets management |
-| **OBSERVABILITY.md** | Health checks, metrics, request tracing, monitoring guide |
+| **OBSERVABILITY.md** | Health checks, metrics, request-ID correlation, monitoring guide |
 | **AUTHENTICATION.md** | Auth flows, JWT, password reset |
 | **CONTRACTS.md** | Stable contracts (response, auth, env); versioning policy — avoid breaking changes |
 | **AI_QUICK_REFERENCE.md** | Quick templates and decision trees |
@@ -102,7 +102,7 @@ Welcome to the project documentation. This guide helps you navigate all document
 **Setup observability (health checks, metrics):**
 1. Guide: `OBSERVABILITY.md`
 2. Endpoints: GET /health, GET /metrics
-3. Implementation: Middleware-based, <1% overhead
+3. Implementation: Middleware-based request-ID correlation and basic counters
 
 **Configure environment:**
 1. Guide: `CONFIGURATION.md`

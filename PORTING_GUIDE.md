@@ -162,7 +162,7 @@ cd /path/to/existing-project
 ### Scenario 3: Company-Wide Template
 
 ```bash
-# Create company template
+# Create a reusable team template
 mkdir /company/templates/go-gin-standard
 cd /company/templates/go-gin-standard
 
@@ -175,7 +175,7 @@ cp -r /path/to/boilerplate/* .
 # All teams can now use this template
 ```
 
-**Result:** Consistent documentation across all company projects! 🏢
+**Result:** Consistent documentation across team projects.
 
 ---
 
@@ -195,7 +195,7 @@ import "github.com/myorg/my-api/internal/app/dto"
 
 ```markdown
 <!-- BEFORE -->
-# Go Gin Enterprise Boilerplate
+# Go Gin Boilerplate
 
 <!-- AFTER -->
 # My Awesome API

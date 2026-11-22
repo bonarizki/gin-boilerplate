@@ -273,4 +273,4 @@ Non-essential files are listed in `.gitignore` (e.g. `PROJECT_ANALYSIS.md`). Bef
 
 ---
 
-**Remember:** These are COMPANY STANDARDS. Violation = Code Rejected.
+**Remember:** These are project coding standards for this starter kit. Violation = Code Rejected.

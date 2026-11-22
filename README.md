@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🚀 Go Gin Enterprise Boilerplate
+# 🚀 Go Gin Boilerplate
 
-**Production-Ready Starter Kit for Building Scalable RESTful APIs**
+**A production-oriented Go (Gin) starter kit for building RESTful APIs**
 
 [![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://golang.org)
 [![Gin Framework](https://img.shields.io/badge/Gin-v1.11-00ADD8?style=flat)](https://github.com/gin-gonic/gin)
@@ -17,37 +17,37 @@
 
 ## 📖 What is This?
 
-**This is not just another boilerplate** - This is a **company-standard starter kit** designed to accelerate API development while maintaining high code quality, consistency, and best practices across all projects.
+A **production-oriented Go (Gin) starter kit**, designed as a team standard to accelerate API development while keeping code quality, structure, and conventions consistent.
 
 ### 🎯 Purpose
 
-This boilerplate serves as the **foundation for all Go API projects** in our organization. It eliminates the need to set up authentication, database connections, testing infrastructure, and project structure from scratch for every new project.
+Use this as a shared starting point for Go API services: authentication, database wiring, testing layout, and project structure are already in place so new services do not begin from an empty repo.
 
 ### 💡 Why This Boilerplate?
 
 | Problem | Solution |
 |---------|----------|
-| ❌ Starting from zero for each project | ✅ Production-ready foundation with auth, DB, testing |
-| ❌ Inconsistent code across projects | ✅ Enforced coding standards and design patterns |
-| ❌ Poor documentation | ✅ 5000+ lines of comprehensive documentation |
-| ❌ No testing examples | ✅ Complete test suite with examples |
-| ❌ Security vulnerabilities | ✅ Built-in security best practices |
-| ❌ AI agents breaking conventions | ✅ AI-friendly docs with critical rules |
+| ❌ Starting from zero for each project | ✅ Starter with auth, DB, and test layout |
+| ❌ Inconsistent code across projects | ✅ Documented coding standards and design patterns |
+| ❌ Sparse documentation | ✅ Extensive docs under `docs/` |
+| ❌ No testing examples | ✅ Unit and integration test examples |
+| ❌ Easy to miss security basics | ✅ Password hashing, JWT patterns, input validation |
+| ❌ AI agents breaking conventions | ✅ AI-oriented docs with critical rules |
 
 ### 🎁 What You Get
 
 Start your next API project with:
 - ✅ **JWT Authentication** - Login, register, refresh token, password reset ready to go
-- ✅ **Clean Architecture** - Proven layered structure (Controllers → Services → Repositories)
-- ✅ **Complete Documentation** - 5000+ lines covering every aspect
+- ✅ **Clean Architecture** - Layered structure (Controllers → Services → Repositories)
+- ✅ **Documentation** - Guides under `docs/` covering standards, patterns, and config
 - ✅ **Testing Infrastructure** - Unit tests, integration tests, examples included
-- ✅ **Security Built-in** - SQL injection prevention, password hashing, token security
-- ✅ **Observability Ready** - Health checks, metrics, request tracing (<1% overhead)
+- ✅ **Security Built-in** - Password hashing, token handling, request validation
+- ✅ **Observability Basics** - Health checks, basic metrics, request-ID correlation
 - ✅ **Database Ready** - PostgreSQL with GORM, migrations, master-replica support
 - ✅ **Docker Support** - Development and production configurations
-- ✅ **AI-Ready** - Comprehensive guides for AI-assisted development
+- ✅ **AI-Ready** - Guides for AI-assisted development
 
-**Time to First API:** ~5 minutes instead of days 🚀
+**Time to First API:** clone, copy `.env.example`, run — see [Quick Start](#-quick-start)
 
 ---
 
@@ -62,7 +62,7 @@ Start your next API project with:
 - 📝 **Structured Logging** - Logrus integration with custom formatting
 - 🔌 **Middleware Support** - CORS, Auth, Rate Limiting middleware
 - 🛡️ **Rate Limiting** - Per-IP rate limiting to prevent abuse and brute force attacks
-- 📊 **Observability** - Health checks, metrics, and request tracing (<1% overhead)
+- 📊 **Observability** - Health checks, basic metrics, and request-ID correlation
 - ⚙️ **Environment Management** - Config validation, environment detection, secrets management
 - 🗃️ **Database Migrations** - Versioned SQL migrations (golang-migrate), fail-fast on startup
 - 🐳 **Docker Support** - Dev and prod Docker configurations with live reload
@@ -71,12 +71,11 @@ Start your next API project with:
 
 ### What Makes This Different
 
-- 📚 **World-Class Documentation** - 5000+ lines covering standards, patterns, and AI guides
+- 📚 **Extensive documentation** - Standards, patterns, and AI guides under `docs/`
 - 🤖 **AI-Friendly** - Specialized docs for AI-assisted development ([docs/00_AI_CRITICAL_RULES.md](docs/00_AI_CRITICAL_RULES.md))
-- 🛡️ **Security First** - SQL injection prevention, secure password handling, token security
-- 🎯 **Battle-Tested Patterns** - Proven in production environments
-- 📏 **Enforced Standards** - File size limits, function limits, test coverage requirements
-- 🧩 **Modular Design** - Easy to extend, hard to break
+- 🛡️ **Security-oriented defaults** - Password hashing, token handling, request validation
+- 📏 **Documented standards** - File size limits, function limits, coverage goals
+- 🧩 **Modular layout** - Clear layers that are easy to extend
 
 ---
 
@@ -84,8 +83,8 @@ Start your next API project with:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-org/go-gin-boilerplate.git
-cd go-gin-boilerplate
+git clone https://github.com/bonarizki/gin-boilerplate.git
+cd gin-boilerplate
 
 # 2. Copy environment file
 cp .env.example .env
@@ -186,7 +185,7 @@ If you're an AI agent or using AI-assisted development:
 | [docs/CODING_STANDARDS.md](docs/CODING_STANDARDS.md) | Comprehensive coding standards |
 | [docs/DESIGN_PATTERNS.md](docs/DESIGN_PATTERNS.md) | Architecture and design patterns |
 | [docs/CONTROLLER_COMPLIANCE_AUDIT.md](docs/CONTROLLER_COMPLIANCE_AUDIT.md) | Controller/router compliance checklist |
-| [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | Health checks, metrics, request tracing |
+| [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | Health checks, metrics, request-ID correlation |
 | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Environment management & validation |
 | [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md) | Auth flows and JWT usage |
 | [docs/CONTRACTS.md](docs/CONTRACTS.md) | Stable contracts (response shape, auth, env) — avoid breaking changes |
@@ -196,7 +195,7 @@ If you're an AI agent or using AI-assisted development:
 **Quick Links:**
 - 🏗️ [Architecture Overview](#-architecture)
 - 🔐 [Authentication Guide](#-authentication-endpoints)
-- 📊 [Observability Guide](docs/OBSERVABILITY.md) - Health checks, metrics, tracing
+- 📊 [Observability Guide](docs/OBSERVABILITY.md) - Health checks, metrics, request-ID correlation
 - ⚙️ [Configuration Guide](docs/CONFIGURATION.md) - Environment management
 - 🧪 [Test Structure](tests/README.md)
 - 📋 [Controller Compliance](docs/CONTROLLER_COMPLIANCE_AUDIT.md) - Standards checklist
@@ -278,7 +277,7 @@ project/
 ├── pkg/                       # Public reusable packages
 │   ├── config/               # Configuration management
 │   ├── logger/               # Logging infrastructure
-│   ├── metrics/               # Prometheus-style metrics
+│   ├── metrics/               # Basic JSON counters (not full Prometheus)
 │   ├── types/                # Shared types (response, errors)
 │   └── utils/                # MUST use for all HTTP responses
 │       ├── response.go       # Ok, Created, HandleErrors, HandleErrorsWithData, etc.
@@ -508,7 +507,7 @@ Authorization: Bearer <your-jwt-token>
 
 ## 🧪 Testing
 
-Run the complete test suite:
+Run the test suite:
 
 ```bash
 # Run all tests
@@ -531,7 +530,7 @@ go test -race ./tests/...
 go test -v ./tests/...
 ```
 
-**Test Coverage Goals:**
+**Coverage goals** (aspirational contribution targets, not a measured badge of the current tree):
 - Services: 70% minimum (85% target)
 - Repositories: 70% minimum
 - Controllers: 60% minimum
@@ -904,8 +903,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 💬 Support
 
 **Issues & Questions:**
-- 🐛 [Report Bug](https://github.com/your-org/go-gin-boilerplate/issues)
-- 💡 [Request Feature](https://github.com/your-org/go-gin-boilerplate/issues)
+- 🐛 [Report Bug](https://github.com/bonarizki/gin-boilerplate/issues)
+- 💡 [Request Feature](https://github.com/bonarizki/gin-boilerplate/issues)
 - 📖 [Read Documentation](docs/README.md)
 
 **Resources:**
