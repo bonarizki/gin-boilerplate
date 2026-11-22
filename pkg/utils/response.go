@@ -137,11 +137,13 @@ func HandleErrors(c *gin.Context, code int, err error, message string) {
 		sendErrorResponse(c, code, message, nil, FormatValidationErrors(errs))
 		return
 	}
-	errMsg := message
-	if err != nil {
-		errMsg = err.Error()
+	clientMsg := message
+	if code >= http.StatusInternalServerError || code == http.StatusUnauthorized {
+		clientMsg = message
+	} else if err != nil {
+		clientMsg = err.Error()
 	}
-	sendErrorResponse(c, code, message, nil, gin.H{"error": errMsg})
+	sendErrorResponse(c, code, message, nil, gin.H{"error": clientMsg})
 }
 
 // HandleErrorsWithData sends an error response with a data payload (standard format).
