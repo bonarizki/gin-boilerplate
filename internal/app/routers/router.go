@@ -1,6 +1,8 @@
 package routers
 
 import (
+	"time"
+
 	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
@@ -20,8 +22,10 @@ func SetupRoute(deps Deps) *gin.Engine {
 	cfg := config.Get()
 	debug := cfg != nil && cfg.Server.Debug
 	var trustedProxies []string
+	var requestTimeout time.Duration
 	if cfg != nil {
 		trustedProxies = cfg.Server.TrustedProxies
+		requestTimeout = time.Duration(cfg.Server.RequestTimeoutSeconds) * time.Second
 	}
 	if debug {
 		gin.SetMode(gin.DebugMode)
@@ -33,6 +37,7 @@ func SetupRoute(deps Deps) *gin.Engine {
 	router.SetTrustedProxies(trustedProxies)
 	router.Use(middlewares.RequestIDMiddleware())
 	router.Use(middlewares.RecoveryMiddleware())
+	router.Use(middlewares.RequestTimeoutMiddleware(requestTimeout))
 	router.Use(middlewares.SecurityHeadersMiddleware())
 	router.Use(middlewares.CORSMiddleware())
 	router.Use(middlewares.BodyLimitMiddleware())
