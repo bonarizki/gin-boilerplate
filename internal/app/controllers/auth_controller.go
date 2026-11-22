@@ -167,11 +167,10 @@ func (ctrl *AuthController) ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	resetToken, err := ctrl.service.ForgotPassword(ctx, &req)
-	if err != nil {
+	if err := ctrl.service.ForgotPassword(ctx, &req); err != nil {
 		if errors.Is(err, auth.ErrUserNotFound) {
 			logger.LogFinish(ctx, "AuthController.ForgotPassword", err, start)
-			utils.Ok(c, nil, "If the email exists, a password reset link has been sent")
+			utils.Ok(c, map[string]interface{}{"message": "If the email exists, a password reset link has been sent"}, "Password reset initiated")
 			return
 		}
 		if apiErr := authErrToAPIError(err); apiErr != nil {
@@ -186,11 +185,7 @@ func (ctrl *AuthController) ForgotPassword(c *gin.Context) {
 	}
 
 	logger.LogFinish(ctx, "AuthController.ForgotPassword", nil, start)
-	data := map[string]interface{}{"message": "If the email exists, a password reset link has been sent"}
-	if resetToken != "" {
-		data["token"] = resetToken
-	}
-	utils.Ok(c, data, "Password reset initiated")
+	utils.Ok(c, map[string]interface{}{"message": "If the email exists, a password reset link has been sent"}, "Password reset initiated")
 }
 
 // ResetPassword handles password reset endpoint.

@@ -139,60 +139,57 @@ func (s *AuthService) LogoutAll(ctx context.Context, userID uint) error {
 	return nil
 }
 
-// ForgotPassword generates a password reset token and returns it.
-//
-// In production, this token should be sent via email instead of returned in response.
+// ForgotPassword generates a password reset token and sends it via the configured mailer.
+// The raw token is never returned to callers.
 // Returns ErrUserNotFound if email doesn't exist.
-func (s *AuthService) ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) (token string, err error) {
+func (s *AuthService) ForgotPassword(ctx context.Context, req *dto.ForgotPasswordRequest) (err error) {
 	ctx, start := logger.LogStart(ctx, "AuthService.ForgotPassword")
+
+	if s.mailer == nil {
+		err = ErrMailerNotConfigured
+		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
+		return err
+	}
 
 	user, err := s.userRepo.GetUserByEmail(req.Email)
 	if err != nil {
 		logger.Errorf("failed to get user by email: %v", err)
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
-		return "", fmt.Errorf("failed to process request: %w", err)
+		return fmt.Errorf("failed to process request: %w", err)
 	}
 
 	if user == nil {
 		logger.Warnf("password reset attempt for non-existent email: %s", req.Email)
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", ErrUserNotFound, start)
-		return "", ErrUserNotFound
+		return ErrUserNotFound
 	}
 
-	// Generate password reset token
 	resetToken, err := s.generatePasswordResetToken()
 	if err != nil {
 		logger.Errorf("failed to generate reset token: %v", err)
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
-		return "", fmt.Errorf("failed to generate reset token: %w", err)
+		return fmt.Errorf("failed to generate reset token: %w", err)
 	}
 
-	// Set token expiry (15 minutes from now). Only the hash is persisted;
-	// the raw token is never stored, mirroring refresh token handling.
 	expiry := time.Now().Add(15 * time.Minute)
 	user.PasswordResetToken = hashToken(resetToken)
 	user.PasswordResetExpiry = &expiry
 
-	// Save to database
 	if err := s.userRepo.UpdateUser(user); err != nil {
 		logger.Errorf("failed to save reset token: %v", err)
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
-		return "", fmt.Errorf("failed to save reset token: %w", err)
+		return fmt.Errorf("failed to save reset token: %w", err)
 	}
 
 	logger.Infof("password reset token generated for user: %s", user.Email)
 
-	if s.mailer != nil {
-		if err := s.mailer.SendPasswordResetEmail(user.Email, resetToken); err != nil {
-			logger.Errorf("failed to send password reset email: %v", err)
-			logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
-			return "", fmt.Errorf("failed to send reset email: %w", err)
-		}
-		logger.LogFinish(ctx, "AuthService.ForgotPassword", nil, start)
-		return "", nil
+	if err := s.mailer.SendPasswordResetEmail(user.Email, resetToken); err != nil {
+		logger.Errorf("failed to send password reset email: %v", err)
+		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
+		return fmt.Errorf("failed to send reset email: %w", err)
 	}
 	logger.LogFinish(ctx, "AuthService.ForgotPassword", nil, start)
-	return resetToken, nil
+	return nil
 }
 
 // ResetPassword resets user password using a valid reset token.

@@ -23,6 +23,7 @@ var (
 	ErrEmailAlreadyExists  = errors.New("email already exists")
 	ErrInvalidCredentials  = errors.New("invalid email or password")
 	ErrUserNotFound        = errors.New("user not found")
+	ErrMailerNotConfigured = errors.New("password reset mailer not configured")
 	ErrInvalidRefreshToken = errors.New("invalid or expired refresh token")
 	ErrInvalidResetToken   = errors.New("invalid or expired reset token")
 	ErrResetTokenExpired   = errors.New("reset token has expired")

@@ -6,6 +6,7 @@ import (
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
+	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +24,11 @@ func RegisterRoutes(route *gin.Engine) {
 	apiV1.Use(middlewares.RateLimitMiddleware())
 	userRepo := repositories.NewUserRepository()
 	refreshTokenRepo := repositories.NewRefreshTokenRepository()
-	authService := auth.NewAuthService(userRepo, refreshTokenRepo, nil)
+	mailer, err := auth.ResolveMailer()
+	if err != nil {
+		logger.Fatalf("mailer configuration: %v", err)
+	}
+	authService := auth.NewAuthService(userRepo, refreshTokenRepo, mailer)
 	exampleService := services.NewExampleService()
 
 	RegisterAuthRoutes(apiV1, authService)

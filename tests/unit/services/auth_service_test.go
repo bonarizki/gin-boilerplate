@@ -36,11 +36,11 @@ func testHashToken(raw string) string {
 }
 
 func newAuthServiceWithMockRepo() *auth.AuthService {
-	return auth.NewAuthService(mocks.NewMockUserRepository(), mocks.NewMockRefreshTokenRepository(), nil)
+	return auth.NewAuthService(mocks.NewMockUserRepository(), mocks.NewMockRefreshTokenRepository(), auth.NewLogMailer())
 }
 
 func newAuthServiceWithRepo(repo repositories.UserRepository) *auth.AuthService {
-	return auth.NewAuthService(repo, mocks.NewMockRefreshTokenRepository(), nil)
+	return auth.NewAuthService(repo, mocks.NewMockRefreshTokenRepository(), auth.NewLogMailer())
 }
 
 // NOTE: These tests demonstrate testing patterns for services.
@@ -314,25 +314,21 @@ func TestForgotPassword(t *testing.T) {
 		name        string
 		email       string
 		expectError error
-		expectToken bool
 	}{
 		{
 			name:        "Valid email - user exists",
 			email:       "user@example.com",
 			expectError: nil,
-			expectToken: true,
 		},
 		{
 			name:        "Email not found",
 			email:       "nonexistent@example.com",
 			expectError: auth.ErrUserNotFound,
-			expectToken: false,
 		},
 		{
 			name:        "Invalid email format - no such user",
 			email:       "invalid-email",
 			expectError: auth.ErrUserNotFound,
-			expectToken: false,
 		},
 	}
 
@@ -342,18 +338,15 @@ func TestForgotPassword(t *testing.T) {
 				Email: tt.email,
 			}
 
-			token, err := service.ForgotPassword(context.Background(), req)
+			err := service.ForgotPassword(context.Background(), req)
 
 			if tt.expectError != nil {
 				assert.Error(t, err)
 				assert.True(t, errors.Is(err, tt.expectError), "expected %v", tt.expectError)
-				assert.Empty(t, token)
 			} else {
 				assert.NoError(t, err)
-				if tt.expectToken {
-					assert.NotEmpty(t, token)
-					assert.Len(t, token, 64)
-				}
+				user, _ := mockRepo.GetUserByEmail(tt.email)
+				assert.NotEmpty(t, user.PasswordResetToken)
 			}
 		})
 	}
