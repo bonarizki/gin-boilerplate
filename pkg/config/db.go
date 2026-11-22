@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 )
 
 type DatabaseConfiguration struct {
@@ -20,6 +21,10 @@ type DatabaseConfiguration struct {
 	ReplicaHost     string
 	ReplicaPort     string
 	ReplicaSslMode  string
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime int // minutes
+	ConnMaxIdleTime int // minutes
 }
 
 // DbConfiguration returns master and replica DSN from loaded config.
@@ -30,13 +35,20 @@ func DbConfiguration() (masterDSN, replicaDSN string) {
 		return "", ""
 	}
 	d := &c.Database
-	masterDSN = fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		d.Host, d.Username, d.Password, d.Dbname, d.Port, d.SslMode,
-	)
-	replicaDSN = fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		d.ReplicaHost, d.ReplicaUsername, d.ReplicaPassword, d.ReplicaDbname, d.ReplicaPort, d.ReplicaSslMode,
-	)
+	masterDSN = postgresDSN(d.Host, d.Username, d.Password, d.Dbname, d.Port, d.SslMode)
+	replicaDSN = postgresDSN(d.ReplicaHost, d.ReplicaUsername, d.ReplicaPassword, d.ReplicaDbname, d.ReplicaPort, d.ReplicaSslMode)
 	return masterDSN, replicaDSN
+}
+
+func postgresDSN(host, user, password, dbname, port, sslmode string) string {
+	u := &url.URL{
+		Scheme:   "postgres",
+		Host:     fmt.Sprintf("%s:%s", host, port),
+		Path:     "/" + dbname,
+		RawQuery: fmt.Sprintf("sslmode=%s", url.QueryEscape(sslmode)),
+	}
+	if user != "" {
+		u.User = url.UserPassword(user, password)
+	}
+	return u.String()
 }

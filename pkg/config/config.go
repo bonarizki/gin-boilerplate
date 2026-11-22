@@ -150,6 +150,10 @@ func SetupConfig() error {
 			ReplicaHost:     viper.GetString("REPLICA_DB_HOST"),
 			ReplicaPort:     viper.GetString("REPLICA_DB_PORT"),
 			ReplicaSslMode:  replicaSsl,
+			MaxOpenConns:    dbPoolInt("DB_MAX_OPEN_CONNS", 25),
+			MaxIdleConns:    dbPoolInt("DB_MAX_IDLE_CONNS", 5),
+			ConnMaxLifetime: dbPoolInt("DB_CONN_MAX_LIFETIME", 30),
+			ConnMaxIdleTime: dbPoolInt("DB_CONN_MAX_IDLE_TIME", 5),
 		},
 	}
 	if appConfig.Server.Port == "" {
@@ -284,4 +288,12 @@ func IsDebugEnabled() bool {
 
 	// Otherwise, default to true for development, false for others
 	return IsDevelopment()
+}
+
+func dbPoolInt(key string, def int) int {
+	v := viper.GetInt(key)
+	if v <= 0 {
+		return def
+	}
+	return v
 }

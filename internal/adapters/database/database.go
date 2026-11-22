@@ -1,6 +1,8 @@
 package database
 
 import (
+	"time"
+
 	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"gorm.io/driver/postgres"
@@ -34,12 +36,28 @@ func DbConnection(masterDSN, replicaDSN string) error {
 	}
 
 	if !debug {
-		db.Use(dbresolver.Register(dbresolver.Config{
+		if err := db.Use(dbresolver.Register(dbresolver.Config{
 			Replicas: []gorm.Dialector{
 				postgres.Open(replicaDSN),
 			},
 			Policy: dbresolver.RandomPolicy{},
-		}))
+		})); err != nil {
+			logger.Errorf("dbresolver registration error: %v", err)
+			return err
+		}
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		logger.Errorf("database sql.DB error: %v", err)
+		return err
+	}
+	if c := config.Get(); c != nil {
+		d := c.Database
+		sqlDB.SetMaxOpenConns(d.MaxOpenConns)
+		sqlDB.SetMaxIdleConns(d.MaxIdleConns)
+		sqlDB.SetConnMaxLifetime(time.Duration(d.ConnMaxLifetime) * time.Minute)
+		sqlDB.SetConnMaxIdleTime(time.Duration(d.ConnMaxIdleTime) * time.Minute)
 	}
 
 	DB = db
