@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
+	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 )
 
@@ -69,18 +70,33 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 		return nil, fmt.Errorf("failed to generate new access token: %w", err)
 	}
 
-	// Rotate: issue a new refresh token in the same family, then revoke the old one
-	newRefreshToken, err := s.issueRefreshToken(user.ID, tokenRecord.FamilyID)
+	rawRefresh, err := s.generateRefreshToken()
 	if err != nil {
-		logger.Errorf("failed to issue rotated refresh token: %v", err)
+		logger.Errorf("failed to generate rotated refresh token: %v", err)
 		logger.LogFinish(ctx, "AuthService.RefreshToken", err, start)
-		return nil, fmt.Errorf("failed to issue rotated refresh token: %w", err)
+		return nil, fmt.Errorf("failed to generate rotated refresh token: %w", err)
 	}
-	if err := s.refreshTokenRepo.MarkRotated(tokenRecord.ID, hashToken(newRefreshToken)); err != nil {
-		logger.Errorf("failed to revoke rotated refresh token: %v", err)
+	newRecord := &models.RefreshToken{
+		UserID:    user.ID,
+		TokenHash: hashToken(rawRefresh),
+		FamilyID:  tokenRecord.FamilyID,
+		ExpiresAt: time.Now().Add(s.refreshTokenTTL()),
+	}
+	rotated, err := s.refreshTokenRepo.Rotate(tokenRecord.ID, newRecord)
+	if err != nil {
+		logger.Errorf("failed to rotate refresh token: %v", err)
 		logger.LogFinish(ctx, "AuthService.RefreshToken", err, start)
-		return nil, fmt.Errorf("failed to revoke rotated refresh token: %w", err)
+		return nil, fmt.Errorf("failed to rotate refresh token: %w", err)
 	}
+	if !rotated {
+		logger.Warnf("concurrent refresh or reuse for user %d, revoking family %s", tokenRecord.UserID, tokenRecord.FamilyID)
+		if revokeErr := s.refreshTokenRepo.RevokeFamily(tokenRecord.FamilyID); revokeErr != nil {
+			logger.Errorf("failed to revoke token family after failed rotation: %v", revokeErr)
+		}
+		logger.LogFinish(ctx, "AuthService.RefreshToken", ErrInvalidRefreshToken, start)
+		return nil, ErrInvalidRefreshToken
+	}
+	newRefreshToken := rawRefresh
 
 	logger.Infof("refresh token successful for user: %s", user.Email)
 
@@ -150,6 +166,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req *dto.ForgotPasswor
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", err, start)
 		return err
 	}
+
+	req.Email = normalizeEmail(req.Email)
 
 	user, err := s.userRepo.GetUserByEmail(req.Email)
 	if err != nil {
@@ -237,6 +255,12 @@ func (s *AuthService) ResetPassword(ctx context.Context, req *dto.ResetPasswordR
 		logger.Errorf("failed to update password: %v", err)
 		logger.LogFinish(ctx, "AuthService.ResetPassword", err, start)
 		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	if err := s.refreshTokenRepo.RevokeAllForUser(user.ID); err != nil {
+		logger.Errorf("failed to revoke refresh tokens after password reset: %v", err)
+		logger.LogFinish(ctx, "AuthService.ResetPassword", err, start)
+		return fmt.Errorf("failed to revoke sessions after password reset: %w", err)
 	}
 
 	logger.Infof("password reset successful for user: %s", user.Email)
