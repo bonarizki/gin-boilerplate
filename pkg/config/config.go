@@ -1,7 +1,9 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
@@ -36,10 +38,19 @@ func SetForTest(c *Configuration) {
 // SetupConfig loads and validates configuration from .env file
 // and stores it in the global config (accessible via Get()).
 func SetupConfig() error {
-	viper.SetConfigFile(".env")
+	viper.AutomaticEnv()
+	if path := os.Getenv("CONFIG_FILE"); path != "" {
+		viper.SetConfigFile(path)
+	} else {
+		viper.SetConfigFile(".env")
+	}
 	if err := viper.ReadInConfig(); err != nil {
-		logger.Errorf("Error reading config file, %s", err)
-		return fmt.Errorf("failed to read config file: %w", err)
+		var notFound viper.ConfigFileNotFoundError
+		if errors.As(err, &notFound) || os.IsNotExist(err) || strings.Contains(err.Error(), "no such file") {
+			logger.Infof("No config file; using environment variables")
+		} else {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
 	}
 
 	if err := ValidateConfig(); err != nil {
@@ -50,7 +61,7 @@ func SetupConfig() error {
 	debug := false
 	if viper.IsSet("DEBUG") {
 		debug = viper.GetBool("DEBUG")
-	} else if viper.GetString("APP_ENV") == "" || viper.GetString("APP_ENV") == EnvDevelopment {
+	} else if GetEnvironment() == EnvDevelopment {
 		debug = true
 	}
 	allowedHosts := viper.GetString("ALLOWED_HOSTS")
@@ -179,6 +190,14 @@ func ValidateConfig() error {
 		return fmt.Errorf("missing required config keys: %s", strings.Join(missingKeys, ", "))
 	}
 
+	if env := viper.GetString("APP_ENV"); env != "" {
+		switch env {
+		case EnvDevelopment, EnvStaging, EnvProduction:
+		default:
+			return fmt.Errorf("APP_ENV must be %s, %s, or %s", EnvDevelopment, EnvStaging, EnvProduction)
+		}
+	}
+
 	// Validate JWT_SECRET is not using example value
 	jwtSecret := viper.GetString("JWT_SECRET")
 	if strings.Contains(strings.ToUpper(jwtSecret), "CHANGE-THIS") ||
@@ -220,12 +239,12 @@ func GetBool(key string) bool {
 
 // Environment helper functions
 
-// GetEnvironment returns the current application environment
-// Defaults to "development" if APP_ENV is not set
+// GetEnvironment returns the current application environment.
+// Defaults to production when APP_ENV is unset so deployments are not accidentally opened as dev.
 func GetEnvironment() string {
 	env := viper.GetString("APP_ENV")
 	if env == "" {
-		return EnvDevelopment
+		return EnvProduction
 	}
 	return env
 }
