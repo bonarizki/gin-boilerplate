@@ -61,11 +61,36 @@ func (m *MockRefreshTokenRepository) GetByTokenHash(hash string) (*models.Refres
 	return nil, nil
 }
 
+func (m *MockRefreshTokenRepository) Rotate(oldID uint, newToken *models.RefreshToken) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var old *models.RefreshToken
+	for _, t := range m.byHash {
+		if t.ID == oldID {
+			old = t
+			break
+		}
+	}
+	if old == nil || old.RevokedAt != nil {
+		return false, nil
+	}
+	now := time.Now()
+	old.RevokedAt = &now
+	old.ReplacedByHash = newToken.TokenHash
+	if newToken.ID == 0 {
+		m.nextID++
+		newToken.ID = m.nextID
+	}
+	cp := *newToken
+	m.byHash[newToken.TokenHash] = &cp
+	return true, nil
+}
+
 func (m *MockRefreshTokenRepository) MarkRotated(id uint, newTokenHash string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	for _, t := range m.byHash {
-		if t.ID == id {
+		if t.ID == id && t.RevokedAt == nil {
 			now := time.Now()
 			t.RevokedAt = &now
 			t.ReplacedByHash = newTokenHash

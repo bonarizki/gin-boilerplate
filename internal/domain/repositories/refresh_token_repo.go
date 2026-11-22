@@ -15,9 +15,13 @@ import (
 type RefreshTokenRepository interface {
 	Create(token *models.RefreshToken) error
 	GetByTokenHash(hash string) (*models.RefreshToken, error)
+	// Rotate atomically revokes the active token oldID and inserts newToken in one
+	// transaction. Returns rotated=false when the row was already revoked (concurrent
+	// refresh or reuse) without an error.
+	Rotate(oldID uint, newToken *models.RefreshToken) (rotated bool, err error)
 	// MarkRotated revokes the token identified by id. newTokenHash is recorded
 	// as ReplacedByHash when non-empty (rotation); left empty for a terminal
-	// revoke (logout).
+	// revoke (logout). Only affects rows that are still active (revoked_at IS NULL).
 	MarkRotated(id uint, newTokenHash string) error
 	// RevokeFamily revokes every still-active token sharing familyID.
 	// Used for reuse (theft) detection: a rotated-out token being replayed
@@ -55,14 +59,47 @@ func (r *refreshTokenRepo) GetByTokenHash(hash string) (*models.RefreshToken, er
 	return &token, nil
 }
 
+func (r *refreshTokenRepo) Rotate(oldID uint, newToken *models.RefreshToken) (bool, error) {
+	rotated := false
+	err := database.DB.Transaction(func(tx *gorm.DB) error {
+		now := time.Now()
+		result := tx.Model(&models.RefreshToken{}).
+			Where("id = ? AND revoked_at IS NULL", oldID).
+			Updates(map[string]interface{}{
+				"revoked_at":       now,
+				"replaced_by_hash": newToken.TokenHash,
+			})
+		if result.Error != nil {
+			logger.Errorf("failed to revoke refresh token for rotation: %v", result.Error)
+			return fmt.Errorf("failed to revoke refresh token for rotation: %w", result.Error)
+		}
+		if result.RowsAffected != 1 {
+			return nil
+		}
+		if err := tx.Create(newToken).Error; err != nil {
+			logger.Errorf("failed to create rotated refresh token: %v", err)
+			return fmt.Errorf("failed to create rotated refresh token: %w", err)
+		}
+		rotated = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return rotated, nil
+}
+
 func (r *refreshTokenRepo) MarkRotated(id uint, newTokenHash string) error {
 	updates := map[string]interface{}{
 		"revoked_at":       time.Now(),
 		"replaced_by_hash": newTokenHash,
 	}
-	if err := database.DB.Model(&models.RefreshToken{}).Where("id = ?", id).Updates(updates).Error; err != nil {
-		logger.Errorf("failed to mark refresh token rotated: %v", err)
-		return fmt.Errorf("failed to mark refresh token rotated: %w", err)
+	result := database.DB.Model(&models.RefreshToken{}).
+		Where("id = ? AND revoked_at IS NULL", id).
+		Updates(updates)
+	if result.Error != nil {
+		logger.Errorf("failed to mark refresh token rotated: %v", result.Error)
+		return fmt.Errorf("failed to mark refresh token rotated: %w", result.Error)
 	}
 	return nil
 }
