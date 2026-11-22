@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
@@ -47,6 +48,8 @@ func NewAuthService(userRepo repositories.UserRepository, refreshTokenRepo repos
 // Password is hashed using bcrypt before storage.
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (resp *dto.AuthResponse, err error) {
 	ctx, start := logger.LogStart(ctx, "AuthService.Register")
+
+	req.Email = normalizeEmail(req.Email)
 
 	existingUser, err := s.userRepo.GetUserByEmail(req.Email)
 	if err != nil {
@@ -94,6 +97,8 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 // Returns ErrInvalidCredentials if email or password is incorrect.
 func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (resp *dto.AuthResponse, err error) {
 	ctx, start := logger.LogStart(ctx, "AuthService.Login")
+
+	req.Email = normalizeEmail(req.Email)
 
 	user, err := s.userRepo.GetUserByEmail(req.Email)
 	if err != nil {
@@ -209,6 +214,11 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uint) (*dto.UserRes
 
 	logger.LogFinish(ctx, "AuthService.GetProfile", nil, start)
 	return &dto.UserResponse{ID: user.ID, Name: user.Name, Email: user.Email}, nil
+}
+
+// normalizeEmail lowercases and trims an email address for consistent lookups and storage.
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 // Private helper methods
