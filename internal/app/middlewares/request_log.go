@@ -2,13 +2,16 @@ package middlewares
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 // responseRecorder wraps gin.ResponseWriter to capture status, size, and body for logging.
@@ -34,6 +37,37 @@ func (r *responseRecorder) WriteHeader(code int) {
 	r.ResponseWriter.WriteHeader(code)
 }
 
+func shouldLogRequestBodies() bool {
+	if config.IsProduction() {
+		return config.GetBool("LOG_REQUEST_BODIES")
+	}
+	if viper.IsSet("LOG_REQUEST_BODIES") {
+		return config.GetBool("LOG_REQUEST_BODIES")
+	}
+	return true
+}
+
+func logBodyMaxBytes() int {
+	max := config.GetInt("LOG_BODY_LOG_MAX_BYTES")
+	if max <= 0 {
+		max = 4096
+	}
+	return max
+}
+
+func formatLoggedBody(body []byte, contentType string) string {
+	if len(body) == 0 {
+		return "{}"
+	}
+	var masked string
+	if json.Valid(body) {
+		masked = utils.MaskSensitiveJSON(string(body))
+	} else {
+		masked = utils.FormatNonJSONBodyLog(contentType, len(body))
+	}
+	return utils.TruncateForLog(masked, logBodyMaxBytes())
+}
+
 // RequestLogMiddleware logs ARRIVED REQUEST (with masked body/query) and RESPONSE SENT (with masked body).
 // Must run after RequestIDMiddleware so request_id is available.
 func RequestLogMiddleware() gin.HandlerFunc {
@@ -45,10 +79,10 @@ func RequestLogMiddleware() gin.HandlerFunc {
 			return
 		}
 		reqLog := logger.WithRequestID(requestID)
+		logBodies := shouldLogRequestBodies()
 
-		// Read and restore request body
 		var bodyBytes []byte
-		if c.Request.Body != nil {
+		if logBodies && c.Request.Body != nil {
 			var readErr error
 			bodyBytes, readErr = io.ReadAll(c.Request.Body)
 			if readErr != nil {
@@ -56,18 +90,19 @@ func RequestLogMiddleware() gin.HandlerFunc {
 			}
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
-		bodyStr := string(bodyBytes)
-		if bodyStr == "" {
-			bodyStr = "{}"
-		}
+
 		queryStr := c.Request.URL.RawQuery
-		maskedBody := utils.MaskSensitiveJSON(bodyStr)
 		maskedQuery := utils.MaskQueryString(queryStr)
 
-		reqLog.Infof("ARRIVED REQUEST from IP=%s method=%s path=%s query=%s body=%s",
-			c.ClientIP(), c.Request.Method, c.Request.URL.Path, maskedQuery, maskedBody)
+		if logBodies {
+			bodyForLog := formatLoggedBody(bodyBytes, c.GetHeader("Content-Type"))
+			reqLog.Infof("ARRIVED REQUEST from IP=%s method=%s path=%s query=%s body=%s",
+				c.ClientIP(), c.Request.Method, c.Request.URL.Path, maskedQuery, bodyForLog)
+		} else {
+			reqLog.Infof("ARRIVED REQUEST from IP=%s method=%s path=%s query=%s body=<omitted>",
+				c.ClientIP(), c.Request.Method, c.Request.URL.Path, maskedQuery)
+		}
 
-		// Wrap writer to capture response
 		rec := &responseRecorder{
 			ResponseWriter: c.Writer,
 			body:           &bytes.Buffer{},
@@ -78,11 +113,13 @@ func RequestLogMiddleware() gin.HandlerFunc {
 		c.Next()
 
 		durMs := time.Since(start).Seconds() * 1000
-		maskedRespBody := utils.MaskSensitiveJSON(rec.body.String())
-		if maskedRespBody == "" {
-			maskedRespBody = "{}"
+		if logBodies {
+			maskedRespBody := formatLoggedBody(rec.body.Bytes(), rec.Header().Get("Content-Type"))
+			reqLog.Infof("RESPONSE SENT status=%d duration=%.2fms size=%d bytes body=%s",
+				rec.status, durMs, rec.size, maskedRespBody)
+		} else {
+			reqLog.Infof("RESPONSE SENT status=%d duration=%.2fms size=%d bytes body=<omitted>",
+				rec.status, durMs, rec.size)
 		}
-		reqLog.Infof("RESPONSE SENT status=%d duration=%.2fms size=%d bytes body=%s",
-			rec.status, durMs, rec.size, maskedRespBody)
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/bonarizki/gin-boilerplate/internal/domain/repositories"
 	"github.com/bonarizki/gin-boilerplate/pkg/config"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -58,7 +59,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 	}
 
 	if existingUser != nil {
-		logger.Warnf("registration attempt with existing email: %s", req.Email)
+		logger.Warnf("registration attempt with existing email: %s", utils.MaskEmail(req.Email))
 		logger.LogFinish(ctx, "AuthService.Register", ErrEmailAlreadyExists, start)
 		return nil, ErrEmailAlreadyExists
 	}
@@ -85,7 +86,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (r
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	logger.Infof("user registered successfully: %s", user.Email)
+	logger.Infof("user registered successfully: %s", utils.MaskEmail(user.Email))
 
 	response, err := s.issueAuthResponse(user)
 	logger.LogFinish(ctx, "AuthService.Register", err, start)
@@ -108,19 +109,19 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (resp *d
 	}
 
 	if user == nil {
-		logger.Warnf("login attempt with non-existent email: %s", req.Email)
+		logger.Warnf("login attempt with non-existent email: %s", utils.MaskEmail(req.Email))
 		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
 		return nil, ErrInvalidCredentials
 	}
 
 	// Verify password
 	if err = s.verifyPassword(user.Password, req.Password); err != nil {
-		logger.Warnf("login attempt with invalid password: %s", req.Email)
+		logger.Warnf("login attempt with invalid password: %s", utils.MaskEmail(req.Email))
 		logger.LogFinish(ctx, "AuthService.Login", ErrInvalidCredentials, start)
 		return nil, ErrInvalidCredentials
 	}
 
-	logger.Infof("user logged in successfully: %s", user.Email)
+	logger.Infof("user logged in successfully: %s", utils.MaskEmail(user.Email))
 
 	response, err := s.issueAuthResponse(user)
 	logger.LogFinish(ctx, "AuthService.Login", err, start)

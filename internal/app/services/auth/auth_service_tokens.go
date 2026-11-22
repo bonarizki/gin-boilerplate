@@ -10,6 +10,7 @@ import (
 	"github.com/bonarizki/gin-boilerplate/internal/app/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
+	"github.com/bonarizki/gin-boilerplate/pkg/utils"
 )
 
 // RefreshToken generates new access and refresh tokens using a valid refresh token.
@@ -98,7 +99,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 	}
 	newRefreshToken := rawRefresh
 
-	logger.Infof("refresh token successful for user: %s", user.Email)
+	logger.Infof("refresh token successful for user: %s", utils.MaskEmail(user.Email))
 
 	// Build response
 	response := &dto.RefreshTokenResponse{
@@ -177,7 +178,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req *dto.ForgotPasswor
 	}
 
 	if user == nil {
-		logger.Warnf("password reset attempt for non-existent email: %s", req.Email)
+		logger.Warnf("password reset attempt for non-existent email: %s", utils.MaskEmail(req.Email))
 		logger.LogFinish(ctx, "AuthService.ForgotPassword", ErrUserNotFound, start)
 		return ErrUserNotFound
 	}
@@ -199,7 +200,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, req *dto.ForgotPasswor
 		return fmt.Errorf("failed to save reset token: %w", err)
 	}
 
-	logger.Infof("password reset token generated for user: %s", user.Email)
+	logger.Infof("password reset token generated for user: %s", utils.MaskEmail(user.Email))
 
 	if err := s.mailer.SendPasswordResetEmail(user.Email, resetToken); err != nil {
 		logger.Errorf("failed to send password reset email: %v", err)
@@ -232,7 +233,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, req *dto.ResetPasswordR
 
 	// Check if token has expired
 	if user.PasswordResetExpiry == nil || time.Now().After(*user.PasswordResetExpiry) {
-		logger.Warnf("password reset attempt with expired token for user: %s", user.Email)
+		logger.Warnf("password reset attempt with expired token for user: %s", utils.MaskEmail(user.Email))
 		logger.LogFinish(ctx, "AuthService.ResetPassword", ErrResetTokenExpired, start)
 		return ErrResetTokenExpired
 	}
@@ -263,7 +264,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, req *dto.ResetPasswordR
 		return fmt.Errorf("failed to revoke sessions after password reset: %w", err)
 	}
 
-	logger.Infof("password reset successful for user: %s", user.Email)
+	logger.Infof("password reset successful for user: %s", utils.MaskEmail(user.Email))
 
 	logger.LogFinish(ctx, "AuthService.ResetPassword", nil, start)
 	return nil
