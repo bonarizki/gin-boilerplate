@@ -1,7 +1,6 @@
 package routers
 
 import (
-	"github.com/bonarizki/gin-boilerplate/internal/app/controllers"
 	"github.com/bonarizki/gin-boilerplate/internal/app/middlewares"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services/auth"
@@ -31,11 +30,10 @@ func RegisterRoutes(route *gin.Engine) {
 	authService := auth.NewAuthService(userRepo, refreshTokenRepo, mailer)
 	exampleService := services.NewExampleService()
 
-	RegisterAuthRoutes(apiV1, authService)
+	authController := RegisterAuthRoutes(apiV1, authService)
 	RegisterExampleRoutes(apiV1, exampleService)
 
 	// Protected routes (require authentication)
-	authController := controllers.NewAuthController(authService)
 	protectedRoutes := apiV1.Group("")
 	protectedRoutes.Use(middlewares.AuthMiddleware(authService))
 	{
