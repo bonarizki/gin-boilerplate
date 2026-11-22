@@ -2,6 +2,8 @@ package models
 
 import (
 	"time"
+
+	"gorm.io/gorm"
 )
 
 // User represents a user account in the system.
@@ -20,7 +22,7 @@ type User struct {
 
 	CreatedAt time.Time  `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time  `json:"updated_at" gorm:"autoUpdateTime"`
-	DeletedAt *time.Time `json:"deleted_at,omitempty" gorm:"index"` // Soft delete support
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
 }
 
 // TableName specifies the database table name for User model.
