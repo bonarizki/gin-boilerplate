@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.cursor
+.claude
+app.log
+coverage.out
+tmp/
+boilerplate-gin-dat
+docs/
+tests/
+*.md
+!README.md
