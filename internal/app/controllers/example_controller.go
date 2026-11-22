@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"github.com/bonarizki-dat/Datatables-Gin/datatables"
-	"github.com/bonarizki-dat/Datatables-Gin/datatables/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/app/services"
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/bonarizki/gin-boilerplate/pkg/utils"
@@ -36,5 +35,5 @@ func (ctrl *ExampleController) GetDataDatatables(c *gin.Context) {
 		return
 	}
 	logger.LogFinish(ctx, "ExampleController.GetDataDatatables", nil, start)
-	datatables.JSON(c, data.(dto.Datatables))
+	datatables.JSON(c, data)
 }

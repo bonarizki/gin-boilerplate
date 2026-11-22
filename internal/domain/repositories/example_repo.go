@@ -2,13 +2,14 @@ package repositories
 
 import (
 	"github.com/bonarizki-dat/Datatables-Gin/datatables"
+	"github.com/bonarizki-dat/Datatables-Gin/datatables/dto"
 	"github.com/bonarizki/gin-boilerplate/internal/adapters/database"
 	"github.com/bonarizki/gin-boilerplate/internal/domain/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetDataDatatables(c *gin.Context) (interface{}, error) {
+func GetDataDatatables(c *gin.Context) (dto.Datatables, error) {
 	query := database.GetDB().Model(&models.Example{})
 	var example []*models.Example
 	result, err := datatables.OfReturn(
@@ -26,7 +27,7 @@ func GetDataDatatables(c *gin.Context) (interface{}, error) {
 	)
 
 	if err != nil {
-		return nil, err
+		return dto.Datatables{}, err
 	}
 
 	return result, nil
