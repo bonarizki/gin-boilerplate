@@ -22,7 +22,7 @@
 
 ### What is Observability?
 
-Observability is the ability to understand the internal state of your application by examining its external outputs. This starter kit implements **Phase 1** observability features with minimal overhead (<1%).
+Observability is the ability to understand the internal state of your application by examining its external outputs. This starter kit implements **Phase 1** observability features: structured logs, basic counters, and request-ID correlation (no distributed tracing).
 
 ### Three Pillars Implemented
 
