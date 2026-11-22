@@ -129,6 +129,46 @@ func RateLimitMiddleware() gin.HandlerFunc {
 	}
 }
 
+// AuthRateLimitMiddleware applies a stricter per-IP limit to authentication routes.
+// Reads AUTH_RATE_LIMIT_RPM and AUTH_RATE_LIMIT_BURST from config (defaults 5/min, burst 5).
+func AuthRateLimitMiddleware() gin.HandlerFunc {
+	rpm, burst := 5, 5
+	if c := config.Get(); c != nil {
+		if c.Server.AuthRateLimitRPM > 0 {
+			rpm = c.Server.AuthRateLimitRPM
+		}
+		if c.Server.AuthRateLimitBurst > 0 {
+			burst = c.Server.AuthRateLimitBurst
+		}
+	}
+	limit := rate.Limit(float64(rpm) / 60.0)
+	return rateLimitMiddlewareWithLimiter(NewIPRateLimiter(limit, burst))
+}
+
+func rateLimitMiddlewareWithLimiter(limiter *IPRateLimiter) gin.HandlerFunc {
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			limiter.CleanupOldLimiters()
+		}
+	}()
+
+	return func(c *gin.Context) {
+		key := c.ClientIP()
+		ipLimiter := limiter.GetLimiter(key)
+
+		if !ipLimiter.Allow() {
+			logger.Warnf("auth rate limit exceeded for key: %s", key)
+			utils.TooManyRequests(c, nil, "Rate limit exceeded. Please try again later.")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
 // RateLimitMiddlewareWithConfig creates a rate limiting middleware with custom config
 //
 // Parameters:

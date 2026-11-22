@@ -76,6 +76,14 @@ func SetupConfig() error {
 	if burst <= 0 {
 		burst = 200
 	}
+	authRPM := viper.GetInt("AUTH_RATE_LIMIT_RPM")
+	if authRPM <= 0 {
+		authRPM = 5
+	}
+	authBurst := viper.GetInt("AUTH_RATE_LIMIT_BURST")
+	if authBurst <= 0 {
+		authBurst = 5
+	}
 	timezone := viper.GetString("SERVER_TIMEZONE")
 	if timezone == "" {
 		timezone = "UTC"
@@ -123,6 +131,8 @@ func SetupConfig() error {
 			RateLimitRPS:           rps,
 			RateLimitBurst:         burst,
 			RateLimitUseUser:       viper.GetBool("RATE_LIMIT_USE_USER"),
+			AuthRateLimitRPM:       authRPM,
+			AuthRateLimitBurst:     authBurst,
 			CORSAllowedOrigins:     corsOrigins,
 			TrustedProxies:         trustedProxies,
 		},

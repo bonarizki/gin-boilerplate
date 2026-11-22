@@ -25,6 +25,9 @@ type ServerConfiguration struct {
 	RateLimitRPS     int
 	RateLimitBurst   int
 	RateLimitUseUser bool
+	// AuthRateLimitRPM / AuthRateLimitBurst apply stricter per-IP limits on /auth routes only.
+	AuthRateLimitRPM   int
+	AuthRateLimitBurst int
 	// CORSAllowedOrigins is the allowlist of exact frontend origins permitted
 	// to make cross-origin requests. Never contains "*".
 	CORSAllowedOrigins []string
