@@ -8,13 +8,8 @@ import (
 	"github.com/bonarizki/gin-boilerplate/pkg/logger"
 	"github.com/golang-migrate/migrate/v4"
 	migratepostgres "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
-
-// migrationsPath points to the versioned SQL migration files. Each schema
-// change must be added here as a new {version}_{name}.up.sql/.down.sql pair;
-// see sql/README.md for the workflow.
-const migrationsPath = "file://internal/adapters/database/migrations/sql"
 
 // Migrate applies all pending versioned SQL migrations using golang-migrate.
 //
@@ -37,7 +32,12 @@ func Migrate() error {
 		return fmt.Errorf("create migration driver: %w", err)
 	}
 
-	m, err := migrate.NewWithDatabaseInstance(migrationsPath, "postgres", driver)
+	source, err := iofs.New(sqlMigrations, "sql")
+	if err != nil {
+		return fmt.Errorf("open embedded migrations: %w", err)
+	}
+
+	m, err := migrate.NewWithInstance("iofs", source, "postgres", driver)
 	if err != nil {
 		return fmt.Errorf("initialize migrator: %w", err)
 	}
