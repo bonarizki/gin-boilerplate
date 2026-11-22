@@ -372,7 +372,9 @@ func TestResetPassword(t *testing.T) {
 	// Mock is keyed by the same hash the service looks up by (raw token is never stored).
 	mockRepo.SetUserByPasswordResetToken(testHashToken("valid-reset-token"), validUser)
 	mockRepo.SetUserByPasswordResetToken(testHashToken("expired-token"), expiredUser)
-	service := newAuthServiceWithRepo(mockRepo)
+	tokenRepo := mocks.NewMockRefreshTokenRepository()
+	tokenRepo.Seed(&models.RefreshToken{UserID: 1, TokenHash: testHashToken("still-logged-in"), FamilyID: "f1", ExpiresAt: time.Now().Add(24 * time.Hour)})
+	service := auth.NewAuthService(mockRepo, tokenRepo, auth.NewLogMailer())
 
 	tests := []struct {
 		name        string
@@ -420,6 +422,10 @@ func TestResetPassword(t *testing.T) {
 				assert.True(t, errors.Is(err, tt.expectError), "expected %v", tt.expectError)
 			} else {
 				assert.NoError(t, err)
+				if tt.token == "valid-reset-token" {
+					stillActive, _ := tokenRepo.GetByTokenHash(testHashToken("still-logged-in"))
+					assert.NotNil(t, stillActive.RevokedAt, "password reset must revoke all refresh tokens")
+				}
 			}
 		})
 	}
